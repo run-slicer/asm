@@ -177,7 +177,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("--input", "-i", help="the file where the parsed specification is stored",
                             default="./generator/spec.json")
     arg_parser.add_argument("--output", "-o", type=dir_path, help="the directory where output is stored",
-                            default="./src/const")
+                            default="./src/spec")
 
     args = arg_parser.parse_args()
 
