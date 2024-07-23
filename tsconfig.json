@@ -1,7 +1,9 @@
 {
     "compilerOptions": {
-        "module": "es2015",
-        "target": "es2019",
+        "module": "esnext",
+        "target": "es2020",
+        "baseUrl": ".",
+        "moduleResolution": "node",
         "declaration": true,
         "outDir": "./dist",
         "preserveConstEnums": true

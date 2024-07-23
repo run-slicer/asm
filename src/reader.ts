@@ -4,45 +4,73 @@ export interface Stream {
     bytes(n: number): Promise<Uint8Array>;
 }
 
+export interface UTFData {
+    length: number;
+    data: Uint8Array;
+
+    string(): string;
+}
+
 export interface Reader extends Stream {
     integer(): Promise<number>;
+    long(): Promise<bigint>;
     unsignedShort(): Promise<number>;
     unsignedByte(): Promise<number>;
-    utf(): Promise<string>;
+    utf(): Promise<UTFData>;
 }
 
 const readInt = async (stream: Stream): Promise<number> => {
     const buffer = await stream.bytes(4);
 
-    return ((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]) >>> 0;
+    return (buffer[0] << 24) + (buffer[1] << 16) + (buffer[2] << 8) + (buffer[3] << 0);
+};
+
+const readLong = async (stream: Stream): Promise<bigint> => {
+    const buffer = await stream.bytes(8);
+
+    return ((BigInt(buffer[0]) << 56n) +
+        (BigInt(buffer[1] & 255) << 48n) +
+        (BigInt(buffer[2] & 255) << 40n) +
+        (BigInt(buffer[3] & 255) << 32n) +
+        (BigInt(buffer[4] & 255) << 24n) +
+        (BigInt(buffer[5] & 255) << 16n) +
+        (BigInt(buffer[6] & 255) << 8n) +
+        (BigInt(buffer[7] & 255) << 0n));
 };
 
 const readUnsignedShort = async (stream: Stream): Promise<number> => {
     const buffer = await stream.bytes(2);
 
-    return ((buffer[0] << 8) | buffer[1]) >>> 0;
+    return (buffer[0] << 8) + (buffer[1] << 0);
 };
 
 const readUnsignedByte = async (stream: Stream): Promise<number> => {
     return (await stream.bytes(1))[0];
 };
 
-const readUTF = async (stream: Stream): Promise<string> => {
+const readUTF = async (stream: Stream): Promise<UTFData> => {
     const length = await readUnsignedShort(stream);
-    const buffer = await stream.bytes(length);
+    const data = await stream.bytes(length);
 
-    let value = "";
-    for (let i = 0; i < length; i++) {
-        value += String.fromCharCode(buffer[i]);
-    }
+    return {
+        length,
+        data,
+        string: () => {
+            let value = "";
+            for (let i = 0; i < length; i++) {
+                value += String.fromCharCode(data[i]);
+            }
 
-    return value;
+            return value;
+        }
+    };
 };
 
 const createInternal = (stream: Stream): Reader => {
     return {
         ...stream,
         integer: () => readInt(stream),
+        long: () => readLong(stream),
         unsignedShort: () => readUnsignedShort(stream),
         unsignedByte: () => readUnsignedByte(stream),
         utf: () => readUTF(stream),
