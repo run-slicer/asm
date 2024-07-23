@@ -1,5 +1,8 @@
-export interface Stream {
+export interface Closeable {
     close(): Promise<void>;
+}
+
+export interface InStream extends Closeable {
     skip(n: number): Promise<void>;
     bytes(n: number): Promise<Uint8Array>;
 }
@@ -11,7 +14,7 @@ export interface UTFData {
     string(): string;
 }
 
-export interface Reader extends Stream {
+export interface Reader extends InStream {
     integer(): Promise<number>;
     long(): Promise<bigint>;
     unsignedShort(): Promise<number>;
@@ -19,13 +22,13 @@ export interface Reader extends Stream {
     utf(): Promise<UTFData>;
 }
 
-const readInt = async (stream: Stream): Promise<number> => {
+const readInt = async (stream: InStream): Promise<number> => {
     const buffer = await stream.bytes(4);
 
     return (buffer[0] << 24) + (buffer[1] << 16) + (buffer[2] << 8) + (buffer[3] << 0);
 };
 
-const readLong = async (stream: Stream): Promise<bigint> => {
+const readLong = async (stream: InStream): Promise<bigint> => {
     const buffer = await stream.bytes(8);
 
     return ((BigInt(buffer[0]) << 56n) +
@@ -38,17 +41,17 @@ const readLong = async (stream: Stream): Promise<bigint> => {
         (BigInt(buffer[7] & 255) << 0n));
 };
 
-const readUnsignedShort = async (stream: Stream): Promise<number> => {
+const readUnsignedShort = async (stream: InStream): Promise<number> => {
     const buffer = await stream.bytes(2);
 
     return (buffer[0] << 8) + (buffer[1] << 0);
 };
 
-const readUnsignedByte = async (stream: Stream): Promise<number> => {
+const readUnsignedByte = async (stream: InStream): Promise<number> => {
     return (await stream.bytes(1))[0];
 };
 
-const readUTF = async (stream: Stream): Promise<UTFData> => {
+const readUTF = async (stream: InStream): Promise<UTFData> => {
     const length = await readUnsignedShort(stream);
     const data = await stream.bytes(length);
 
@@ -66,7 +69,7 @@ const readUTF = async (stream: Stream): Promise<UTFData> => {
     };
 };
 
-const createInternal = (stream: Stream): Reader => {
+const createInternal = (stream: InStream): Reader => {
     return {
         ...stream,
         integer: () => readInt(stream),

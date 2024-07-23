@@ -1,5 +1,6 @@
 import type { Reader, UTFData } from "./reader";
 import { ConstantType, type HandleKind } from "./spec";
+import type { Writer } from "./writer";
 
 export interface Entry {
     type: ConstantType;
@@ -72,7 +73,7 @@ export interface MethodTypeEntry extends Entry {
 
 export type Pool = (Entry | null)[];
 
-const readSingle = async (index: number, reader: Reader): Promise<Entry> => {
+const readSingle = async (reader: Reader, index: number): Promise<Entry> => {
     const type = await reader.unsignedByte();
     switch (type) {
         case ConstantType.UTF8:
@@ -106,7 +107,7 @@ const readSingle = async (index: number, reader: Reader): Promise<Entry> => {
         case ConstantType.METHOD_HANDLE:
             return { type, index, kind: await reader.unsignedByte(), ref: await reader.unsignedShort() } as HandleEntry;
         default:
-            throw new Error("Invalid constant pool tag " + type + " at position " + index);
+            throw new Error("Unrecognized constant pool tag " + type + " at position " + index);
     }
 };
 
@@ -117,7 +118,7 @@ export const read = async (reader: Reader): Promise<Pool> => {
     pool.fill(null);
 
     for (let i = 1; i < size; i++) {
-        const entry = await readSingle(i, reader);
+        const entry = await readSingle(reader, i);
         pool[i] = entry;
 
         if (entry.type === ConstantType.DOUBLE || entry.type === ConstantType.LONG) {
@@ -126,4 +127,69 @@ export const read = async (reader: Reader): Promise<Pool> => {
     }
 
     return pool;
+};
+
+const writeSingle = async (writer: Writer, entry: Entry) => {
+    await writer.byte(entry.type);
+    switch (entry.type) {
+        case ConstantType.UTF8:
+            return writer.utf((entry as UTF8Entry).value);
+        case ConstantType.INTEGER:
+            return writer.integer((entry as IntegerEntry).value);
+        case ConstantType.FLOAT:
+        case ConstantType.DOUBLE:
+            return writer.bytes((entry as FPEntry).value);
+        case ConstantType.LONG:
+            return writer.long((entry as LongEntry).value);
+        case ConstantType.CLASS:
+            return writer.short((entry as ClassEntry).name);
+        case ConstantType.STRING:
+            return writer.short((entry as StringEntry).data);
+        case ConstantType.METHOD_TYPE:
+            return writer.short((entry as MethodTypeEntry).descriptor);
+        case ConstantType.MODULE:
+        case ConstantType.PACKAGE:
+            return writer.short((entry as ModularEntry).name);
+        case ConstantType.FIELDREF:
+        case ConstantType.METHODREF:
+        case ConstantType.INTERFACE_METHODREF:
+            const refEntry = entry as RefEntry;
+
+            await writer.short(refEntry.ref);
+            await writer.short(refEntry.nameType);
+            break;
+        case ConstantType.NAME_AND_TYPE:
+            const nameTypeEntry = entry as NameTypeEntry;
+
+            await writer.short(nameTypeEntry.name);
+            await writer.short(nameTypeEntry.type_);
+            break;
+        case ConstantType.DYNAMIC:
+        case ConstantType.INVOKE_DYNAMIC:
+            const dynamicEntry = entry as DynamicEntry;
+
+            await writer.short(dynamicEntry.bsmIndex);
+            await writer.short(dynamicEntry.nameType);
+            break;
+        case ConstantType.METHOD_HANDLE:
+            const handleEntry = entry as HandleEntry;
+
+            await writer.byte(handleEntry.kind);
+            await writer.short(handleEntry.ref);
+            break;
+        default:
+            throw new Error("Unrecognized constant pool tag " + entry.type + " at position " + entry.index);
+    }
+};
+
+export const write = async (writer: Writer, pool: Pool) => {
+    await writer.short(pool.length);
+    for (let i = 1; i < pool.length; i++) {
+        const entry = pool[i];
+
+        await writeSingle(writer, entry);
+        if (entry.type === ConstantType.DOUBLE || entry.type === ConstantType.LONG) {
+            i++; // longs and doubles take two pool entries
+        }
+    }
 };
