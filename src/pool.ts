@@ -16,6 +16,11 @@ export interface LongEntry extends Entry {
     value: bigint;
 }
 
+export interface FPEntry extends Entry {
+    type: ConstantType.FLOAT | ConstantType.DOUBLE;
+    value: Uint8Array;
+}
+
 export interface ClassEntry extends Entry {
     type: ConstantType.CLASS;
     name: number; // UTF8Entry index
@@ -67,6 +72,44 @@ export interface MethodTypeEntry extends Entry {
 
 export type Pool = (Entry | null)[];
 
+const readSingle = async (index: number, reader: Reader): Promise<Entry> => {
+    const type = await reader.unsignedByte();
+    switch (type) {
+        case ConstantType.UTF8:
+            return { type, index, value: await reader.utf() } as UTF8Entry;
+        case ConstantType.INTEGER:
+            return { type, index, value: await reader.integer() } as IntegerEntry;
+        case ConstantType.FLOAT:
+            return { type, index, value: await reader.bytes(4) } as FPEntry;
+        case ConstantType.LONG:
+            return { type, index, value: await reader.long() } as LongEntry;
+        case ConstantType.DOUBLE:
+            return { type, index, value: await reader.bytes(8) } as FPEntry;
+        case ConstantType.CLASS:
+            return { type, index, name: await reader.unsignedShort() } as ClassEntry;
+        case ConstantType.STRING:
+            return { type, index, data: await reader.unsignedShort() } as StringEntry;
+        case ConstantType.METHOD_TYPE:
+            return { type, index, descriptor: await reader.unsignedShort() } as MethodTypeEntry;
+        case ConstantType.MODULE:
+        case ConstantType.PACKAGE:
+            return { type, index, name: await reader.unsignedShort() } as ModularEntry;
+        case ConstantType.FIELDREF:
+        case ConstantType.METHODREF:
+        case ConstantType.INTERFACE_METHODREF:
+            return { type, index, ref: await reader.unsignedShort(), nameType: await reader.unsignedShort() } as RefEntry;
+        case ConstantType.NAME_AND_TYPE:
+            return { type, index, name: await reader.unsignedShort(), type_: await reader.unsignedShort() } as NameTypeEntry;
+        case ConstantType.DYNAMIC:
+        case ConstantType.INVOKE_DYNAMIC:
+            return { type, index, bsmIndex: await reader.unsignedShort(), nameType: await reader.unsignedShort() } as DynamicEntry;
+        case ConstantType.METHOD_HANDLE:
+            return { type, index, kind: await reader.unsignedByte(), ref: await reader.unsignedShort() } as HandleEntry;
+        default:
+            throw new Error("Invalid constant pool tag " + type + " at position " + index);
+    }
+};
+
 export const read = async (reader: Reader): Promise<Pool> => {
     const size = await reader.unsignedShort();
 
@@ -74,55 +117,11 @@ export const read = async (reader: Reader): Promise<Pool> => {
     pool.fill(null);
 
     for (let i = 1; i < size; i++) {
-        const type = await reader.unsignedByte();
-        switch (type) {
-            case ConstantType.UTF8:
-                pool[i] = { type, index: i, value: await reader.utf() } as UTF8Entry;
-                break;
-            case ConstantType.INTEGER:
-                pool[i] = { type, index: i, value: await reader.integer() } as IntegerEntry;
-                break;
-            case ConstantType.FLOAT:
-                await reader.skip(4); // skip float
-                break;
-            case ConstantType.LONG:
-                pool[i] = { type, index: i, value: await reader.long() } as LongEntry;
-                i++; // longs take two constant pool entries
-                break;
-            case ConstantType.DOUBLE:
-                await reader.skip(8); // skip double
-                i++; // doubles take two constant pool entries
-                break;
-            case ConstantType.CLASS:
-                pool[i] = { type, index: i, name: await reader.unsignedShort() } as ClassEntry;
-                break;
-            case ConstantType.STRING:
-                pool[i] = { type, index: i, data: await reader.unsignedShort() } as StringEntry;
-                break;
-            case ConstantType.METHOD_TYPE:
-                pool[i] = { type, index: i, descriptor: await reader.unsignedShort() } as MethodTypeEntry;
-                break;
-            case ConstantType.MODULE:
-            case ConstantType.PACKAGE:
-                pool[i] = { type, index: i, name: await reader.unsignedShort() } as ModularEntry;
-                break;
-            case ConstantType.FIELDREF:
-            case ConstantType.METHODREF:
-            case ConstantType.INTERFACE_METHODREF:
-                pool[i] = { type, index: i, ref: await reader.unsignedShort(), nameType: await reader.unsignedShort() } as RefEntry;
-                break;
-            case ConstantType.NAME_AND_TYPE:
-                pool[i] = { type, index: i, name: await reader.unsignedShort(), type_: await reader.unsignedShort() } as NameTypeEntry;
-                break;
-            case ConstantType.DYNAMIC:
-            case ConstantType.INVOKE_DYNAMIC:
-                pool[i] = { type, index: i, bsmIndex: await reader.unsignedShort(), nameType: await reader.unsignedShort() } as DynamicEntry;
-                break;
-            case ConstantType.METHOD_HANDLE:
-                pool[i] = { type, index: i, kind: await reader.unsignedByte(), ref: await reader.unsignedShort() } as HandleEntry;
-                break;
-            default:
-                throw new Error("Invalid constant pool tag " + type + " at position " + i);
+        const entry = await readSingle(i, reader);
+        pool[i] = entry;
+
+        if (entry.type === ConstantType.DOUBLE || entry.type === ConstantType.LONG) {
+            i++; // longs and doubles take two pool entries
         }
     }
 
