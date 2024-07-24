@@ -31,14 +31,16 @@ const readInt = async (stream: InStream): Promise<number> => {
 const readLong = async (stream: InStream): Promise<bigint> => {
     const buffer = await stream.bytes(8);
 
-    return ((BigInt(buffer[0]) << 56n) +
+    return (
+        (BigInt(buffer[0]) << 56n) +
         (BigInt(buffer[1] & 255) << 48n) +
         (BigInt(buffer[2] & 255) << 40n) +
         (BigInt(buffer[3] & 255) << 32n) +
         (BigInt(buffer[4] & 255) << 24n) +
         (BigInt(buffer[5] & 255) << 16n) +
         (BigInt(buffer[6] & 255) << 8n) +
-        (BigInt(buffer[7] & 255) << 0n));
+        (BigInt(buffer[7] & 255) << 0n)
+    );
 };
 
 const readUnsignedShort = async (stream: InStream): Promise<number> => {
@@ -65,7 +67,7 @@ const readUTF = async (stream: InStream): Promise<UTFData> => {
             }
 
             return value;
-        }
+        },
     };
 };
 

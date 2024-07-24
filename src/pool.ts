@@ -98,12 +98,27 @@ const readSingle = async (reader: Reader, index: number): Promise<Entry> => {
         case ConstantType.FIELDREF:
         case ConstantType.METHODREF:
         case ConstantType.INTERFACE_METHODREF:
-            return { type, index, ref: await reader.unsignedShort(), nameType: await reader.unsignedShort() } as RefEntry;
+            return {
+                type,
+                index,
+                ref: await reader.unsignedShort(),
+                nameType: await reader.unsignedShort(),
+            } as RefEntry;
         case ConstantType.NAME_AND_TYPE:
-            return { type, index, name: await reader.unsignedShort(), type_: await reader.unsignedShort() } as NameTypeEntry;
+            return {
+                type,
+                index,
+                name: await reader.unsignedShort(),
+                type_: await reader.unsignedShort(),
+            } as NameTypeEntry;
         case ConstantType.DYNAMIC:
         case ConstantType.INVOKE_DYNAMIC:
-            return { type, index, bsmIndex: await reader.unsignedShort(), nameType: await reader.unsignedShort() } as DynamicEntry;
+            return {
+                type,
+                index,
+                bsmIndex: await reader.unsignedShort(),
+                nameType: await reader.unsignedShort(),
+            } as DynamicEntry;
         case ConstantType.METHOD_HANDLE:
             return { type, index, kind: await reader.unsignedByte(), ref: await reader.unsignedShort() } as HandleEntry;
         default:

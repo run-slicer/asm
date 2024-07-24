@@ -1,4 +1,4 @@
-// This file was generated on 2024-07-22 09:16:46.382302. Do not edit, changes will be overwritten!
+// This file was generated on 2024-07-24 12:04:31.242060. Do not edit, changes will be overwritten!
 
 /** ClassFile attribute names. */
 export const enum AttributeType {

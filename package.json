@@ -8,16 +8,31 @@
     "keywords": [
         "java",
         "bytecode",
-        "reader"
+        "reader",
+        "writer"
     ],
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "exports": {
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "import": "./dist/*.js"
+        },
+        "./spec/*": {
+            "types": "./dist/spec/*.d.ts",
+            "import": "./dist/spec/*.js"
+        }
+    },
     "scripts": {
-        "build": "tsc",
+        "build": "tsc --project tsconfig.build.json",
+        "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\"}' mocha",
         "format": "prettier . --write"
     },
     "devDependencies": {
+        "@types/mocha": "^10.0.7",
+        "mocha": "^10.7.0",
         "prettier": "^3.3.3",
+        "ts-node": "^10.9.2",
         "typescript": "^5.5.3"
     },
     "packageManager": "pnpm@9.5.0+sha512.140036830124618d624a2187b50d04289d5a087f326c9edfc0ccd733d76c4f52c3a313d4fc148794a2a9d81553016004e6742e8cf850670268a7387fc220c903"

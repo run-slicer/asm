@@ -13,32 +13,26 @@ export interface Writer extends OutStream {
 }
 
 const writeInt = (stream: OutStream, v: number): Promise<void> => {
-    return stream.bytes(new Uint8Array([
-        (v >>> 24) & 0xFF,
-        (v >>> 16) & 0xFF,
-        (v >>> 8) & 0xFF,
-        (v >>> 0) & 0xFF,
-    ]));
+    return stream.bytes(new Uint8Array([(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, (v >>> 0) & 0xff]));
 };
 
 const writeLong = (stream: OutStream, v: bigint): Promise<void> => {
-    return stream.bytes(new Uint8Array([
-        Number(v >> 56n),
-        Number(v >> 48n),
-        Number(v >> 40n),
-        Number(v >> 32n),
-        Number(v >> 24n),
-        Number(v >> 16n),
-        Number(v >> 8n),
-        Number(v >> 0n),
-    ]));
+    return stream.bytes(
+        new Uint8Array([
+            Number(v >> 56n),
+            Number(v >> 48n),
+            Number(v >> 40n),
+            Number(v >> 32n),
+            Number(v >> 24n),
+            Number(v >> 16n),
+            Number(v >> 8n),
+            Number(v >> 0n),
+        ])
+    );
 };
 
 const writeShort = async (stream: OutStream, v: number): Promise<void> => {
-    return stream.bytes(new Uint8Array([
-        (v >>> 8) & 0xFF,
-        (v >>> 0) & 0xFF,
-    ]))
+    return stream.bytes(new Uint8Array([(v >>> 8) & 0xff, (v >>> 0) & 0xff]));
 };
 
 const writeByte = async (stream: OutStream, v: number): Promise<void> => {
