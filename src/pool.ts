@@ -69,7 +69,7 @@ export interface MethodTypeEntry extends Entry {
 export type Pool = (Entry | null)[];
 
 const readSingle = (buffer: ByteBuffer, index: number): Entry => {
-    const type = buffer.readByte();
+    const type = buffer.readUnsignedByte();
     switch (type) {
         case ConstantType.UTF8:
             const length = buffer.readUnsignedShort();
@@ -81,7 +81,7 @@ const readSingle = (buffer: ByteBuffer, index: number): Entry => {
             return { type, index, value: buffer.readFloat() } as NumericEntry;
         case ConstantType.LONG:
         case ConstantType.DOUBLE:
-            return { type, index, data: new Uint8Array(buffer.read(4)) } as WideNumericEntry;
+            return { type, index, data: new Uint8Array(buffer.read(8)) } as WideNumericEntry;
         case ConstantType.CLASS:
             return { type, index, name: buffer.readUnsignedShort() } as ClassEntry;
         case ConstantType.STRING:

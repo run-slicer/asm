@@ -92,12 +92,17 @@ export const write = (node: Node): ArrayBuffer => {
     buffer.writeUnsignedShort(node.thisClass.index);
     buffer.writeUnsignedShort(node.superClass ? node.superClass.index : 0);
 
+    buffer.writeUnsignedShort(node.interfaces.length);
     for (const interface_ of node.interfaces) {
         buffer.writeUnsignedShort(interface_.index);
     }
+
+    buffer.writeUnsignedShort(node.fields.length);
     for (const field of node.fields) {
         writeMember(buffer, field);
     }
+
+    buffer.writeUnsignedShort(node.methods.length);
     for (const method of node.methods) {
         writeMember(buffer, method);
     }
