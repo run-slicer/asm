@@ -1,7 +1,6 @@
-import { type ClassEntry, type Pool, read as readPool, write as writePool, type UTF8Entry } from "./pool";
-import type { Reader } from "./reader";
-import { type Attributable, read as readAttributes, write as writeAttributes } from "./attr";
-import type { Writer } from "./writer";
+import { type ClassEntry, type UTF8Entry, type Pool, readPool, writePool } from "./pool";
+import { type Attributable, readAttributes, writeAttributes } from "./attr";
+import { type ByteBuffer, type MutableByteBuffer, createBuffer, createMutableBuffer } from "./buffer";
 
 export interface Member extends Attributable {
     access: number;
@@ -22,82 +21,88 @@ export interface Node extends Attributable {
     methods: Member[];
 }
 
-const readMember = async (reader: Reader, pool: Pool): Promise<Member> => {
+const readMember = (buffer: ByteBuffer, pool: Pool): Member => {
     return {
-        access: await reader.unsignedShort(),
-        name: pool[await reader.unsignedShort()] as UTF8Entry,
-        type: pool[await reader.unsignedShort()] as UTF8Entry,
-        attributes: await readAttributes(reader, pool),
+        access: buffer.readUnsignedShort(),
+        name: pool[buffer.readUnsignedShort()] as UTF8Entry,
+        type: pool[buffer.readUnsignedShort()] as UTF8Entry,
+        attributes: readAttributes(buffer, pool),
     };
 };
 
-export const read = async (reader: Reader): Promise<Node> => {
+export const read = (buf: ArrayBuffer): Node => {
+    const buffer = createBuffer(buf);
+
     const node: Partial<Node> = {
-        magic: await reader.integer(),
-        minor: await reader.unsignedShort(),
-        major: await reader.unsignedShort(),
-        pool: await readPool(reader),
-        access: await reader.unsignedShort(),
+        magic: buffer.readUnsignedInt(),
+        minor: buffer.readUnsignedShort(),
+        major: buffer.readUnsignedShort(),
+        pool: readPool(buffer),
+        access: buffer.readUnsignedShort(),
     };
 
-    node.thisClass = node.pool[await reader.unsignedShort()] as ClassEntry;
+    node.thisClass = node.pool[buffer.readUnsignedShort()] as ClassEntry;
 
-    const superIndex = await reader.unsignedShort();
+    const superIndex = buffer.readUnsignedShort();
     if (superIndex !== 0) {
         node.superClass = node.pool[superIndex] as ClassEntry;
     }
 
-    const interfacesCount = await reader.unsignedShort();
+    const interfacesCount = buffer.readUnsignedShort();
 
     node.interfaces = new Array(interfacesCount);
     for (let i = 0; i < interfacesCount; i++) {
-        node.interfaces[i] = node.pool[await reader.unsignedShort()] as ClassEntry;
+        node.interfaces[i] = node.pool[buffer.readUnsignedShort()] as ClassEntry;
     }
 
-    const fieldsCount = await reader.unsignedShort();
+    const fieldsCount = buffer.readUnsignedShort();
 
     node.fields = new Array(fieldsCount);
     for (let i = 0; i < fieldsCount; i++) {
-        node.fields[i] = await readMember(reader, node.pool);
+        node.fields[i] = readMember(buffer, node.pool);
     }
 
-    const methodsCount = await reader.unsignedShort();
+    const methodsCount = buffer.readUnsignedShort();
 
     node.methods = new Array(methodsCount);
     for (let i = 0; i < methodsCount; i++) {
-        node.methods[i] = await readMember(reader, node.pool);
+        node.methods[i] = readMember(buffer, node.pool);
     }
 
-    node.attributes = await readAttributes(reader, node.pool);
+    node.attributes = readAttributes(buffer, node.pool);
 
     return node as Node;
 };
 
-const writeMember = async (writer: Writer, member: Member) => {
-    await writer.short(member.access);
-    await writer.short(member.name.index);
-    await writer.short(member.type.index);
-    await writeAttributes(writer, member.attributes);
+const writeMember = (buffer: MutableByteBuffer, member: Member) => {
+    buffer.writeUnsignedShort(member.access);
+    buffer.writeUnsignedShort(member.name.index);
+    buffer.writeUnsignedShort(member.type.index);
+    writeAttributes(buffer, member.attributes);
 };
 
-export const write = async (writer: Writer, node: Node) => {
-    await writer.integer(node.magic);
-    await writer.short(node.minor);
-    await writer.short(node.major);
-    await writePool(writer, node.pool);
-    await writer.short(node.access);
-    await writer.short(node.thisClass.index);
-    await writer.short(node.superClass ? node.superClass.index : 0);
+export const write = (node: Node): ArrayBuffer => {
+    const buffer = createMutableBuffer();
+
+    buffer.writeUnsignedInt(node.magic);
+    buffer.writeUnsignedShort(node.minor);
+    buffer.writeUnsignedShort(node.major);
+    writePool(buffer, node.pool);
+    buffer.writeUnsignedShort(node.access);
+    buffer.writeUnsignedShort(node.thisClass.index);
+    buffer.writeUnsignedShort(node.superClass ? node.superClass.index : 0);
 
     for (const interface_ of node.interfaces) {
-        await writer.short(interface_.index);
+        buffer.writeUnsignedShort(interface_.index);
     }
     for (const field of node.fields) {
-        await writeMember(writer, field);
+        writeMember(buffer, field);
     }
     for (const method of node.methods) {
-        await writeMember(writer, method);
+        writeMember(buffer, method);
     }
 
-    await writeAttributes(writer, node.attributes);
+    writeAttributes(buffer, node.attributes);
+
+    return buffer.buffer;
 };

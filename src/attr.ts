@@ -1,6 +1,5 @@
-import type { Reader } from "./reader";
 import type { Pool, UTF8Entry } from "./pool";
-import type { Writer } from "./writer";
+import type { ByteBuffer, MutableByteBuffer } from "./buffer";
 
 export interface Attribute {
     name: UTF8Entry;
@@ -11,33 +10,33 @@ export interface Attributable {
     attributes: Attribute[];
 }
 
-const readSingle = async (reader: Reader, pool: Pool): Promise<Attribute> => {
+const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
     return {
-        name: pool[await reader.unsignedShort()] as UTF8Entry,
-        data: await reader.bytes(await reader.integer()),
+        name: pool[buffer.readUnsignedShort()] as UTF8Entry,
+        data: new Uint8Array(buffer.read(buffer.readInt())),
     };
 };
 
-export const read = async (reader: Reader, pool: Pool): Promise<Attribute[]> => {
-    const attributesCount = await reader.unsignedShort();
+export const readAttributes = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
+    const attributesCount = buffer.readUnsignedShort();
 
     const attributes = new Array<Attribute>(attributesCount);
     for (let i = 0; i < attributesCount; i++) {
-        attributes[i] = await readSingle(reader, pool);
+        attributes[i] = readSingle(buffer, pool);
     }
 
     return attributes;
 };
 
-const writeSingle = async (writer: Writer, attr: Attribute) => {
-    await writer.short(attr.name.index);
-    await writer.integer(attr.data.length);
-    await writer.bytes(attr.data);
+const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
+    buffer.writeUnsignedShort(attr.name.index);
+    buffer.writeInt(attr.data.length);
+    buffer.write(attr.data.buffer);
 };
 
-export const write = async (writer: Writer, attrs: Attribute[]) => {
-    await writer.short(attrs.length);
+export const writeAttributes = (buffer: MutableByteBuffer, attrs: Attribute[]) => {
+    buffer.writeUnsignedShort(attrs.length);
     for (const attr of attrs) {
-        await writeSingle(writer, attr);
+        writeSingle(buffer, attr);
     }
 };

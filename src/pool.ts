@@ -1,25 +1,19 @@
-import type { Reader, UTFData } from "./reader";
 import { ConstantType, type HandleKind } from "./spec";
-import type { Writer } from "./writer";
+import type { ByteBuffer, MutableByteBuffer } from "./buffer";
 
 export interface Entry {
     type: ConstantType;
     index: number;
 }
 
-export interface IntegerEntry extends Entry {
-    type: ConstantType.INTEGER;
+export interface NumericEntry extends Entry {
+    type: ConstantType.INTEGER | ConstantType.FLOAT;
     value: number;
 }
 
-export interface LongEntry extends Entry {
-    type: ConstantType.LONG;
-    value: bigint;
-}
-
-export interface FPEntry extends Entry {
-    type: ConstantType.FLOAT | ConstantType.DOUBLE;
-    value: Uint8Array;
+export interface WideNumericEntry extends Entry {
+    type: ConstantType.LONG | ConstantType.DOUBLE;
+    data: Uint8Array;
 }
 
 export interface ClassEntry extends Entry {
@@ -29,7 +23,8 @@ export interface ClassEntry extends Entry {
 
 export interface UTF8Entry extends Entry {
     type: ConstantType.UTF8;
-    value: UTFData;
+    length: number;
+    data: Uint8Array;
 }
 
 export interface StringEntry extends Entry {
@@ -73,67 +68,68 @@ export interface MethodTypeEntry extends Entry {
 
 export type Pool = (Entry | null)[];
 
-const readSingle = async (reader: Reader, index: number): Promise<Entry> => {
-    const type = await reader.unsignedByte();
+const readSingle = (buffer: ByteBuffer, index: number): Entry => {
+    const type = buffer.readByte();
     switch (type) {
         case ConstantType.UTF8:
-            return { type, index, value: await reader.utf() } as UTF8Entry;
+            const length = buffer.readUnsignedShort();
+
+            return { type, index, length, data: new Uint8Array(buffer.read(length)) } as UTF8Entry;
         case ConstantType.INTEGER:
-            return { type, index, value: await reader.integer() } as IntegerEntry;
+            return { type, index, value: buffer.readInt() } as NumericEntry;
         case ConstantType.FLOAT:
-            return { type, index, value: await reader.bytes(4) } as FPEntry;
+            return { type, index, value: buffer.readFloat() } as NumericEntry;
         case ConstantType.LONG:
-            return { type, index, value: await reader.long() } as LongEntry;
         case ConstantType.DOUBLE:
-            return { type, index, value: await reader.bytes(8) } as FPEntry;
+            return { type, index, data: new Uint8Array(buffer.read(4)) } as WideNumericEntry;
         case ConstantType.CLASS:
-            return { type, index, name: await reader.unsignedShort() } as ClassEntry;
+            return { type, index, name: buffer.readUnsignedShort() } as ClassEntry;
         case ConstantType.STRING:
-            return { type, index, data: await reader.unsignedShort() } as StringEntry;
+            return { type, index, data: buffer.readUnsignedShort() } as StringEntry;
         case ConstantType.METHOD_TYPE:
-            return { type, index, descriptor: await reader.unsignedShort() } as MethodTypeEntry;
+            return { type, index, descriptor: buffer.readUnsignedShort() } as MethodTypeEntry;
         case ConstantType.MODULE:
         case ConstantType.PACKAGE:
-            return { type, index, name: await reader.unsignedShort() } as ModularEntry;
+            return { type, index, name: buffer.readUnsignedShort() } as ModularEntry;
         case ConstantType.FIELDREF:
         case ConstantType.METHODREF:
         case ConstantType.INTERFACE_METHODREF:
             return {
                 type,
                 index,
-                ref: await reader.unsignedShort(),
-                nameType: await reader.unsignedShort(),
+                ref: buffer.readUnsignedShort(),
+                nameType: buffer.readUnsignedShort(),
             } as RefEntry;
         case ConstantType.NAME_AND_TYPE:
             return {
                 type,
                 index,
-                name: await reader.unsignedShort(),
-                type_: await reader.unsignedShort(),
+                name: buffer.readUnsignedShort(),
+                type_: buffer.readUnsignedShort(),
             } as NameTypeEntry;
         case ConstantType.DYNAMIC:
         case ConstantType.INVOKE_DYNAMIC:
             return {
                 type,
                 index,
-                bsmIndex: await reader.unsignedShort(),
-                nameType: await reader.unsignedShort(),
+                bsmIndex: buffer.readUnsignedShort(),
+                nameType: buffer.readUnsignedShort(),
             } as DynamicEntry;
         case ConstantType.METHOD_HANDLE:
-            return { type, index, kind: await reader.unsignedByte(), ref: await reader.unsignedShort() } as HandleEntry;
+            return { type, index, kind: buffer.readUnsignedByte(), ref: buffer.readUnsignedShort() } as HandleEntry;
         default:
             throw new Error("Unrecognized constant pool tag " + type + " at position " + index);
     }
 };
 
-export const read = async (reader: Reader): Promise<Pool> => {
-    const size = await reader.unsignedShort();
+export const readPool = (buffer: ByteBuffer): Pool => {
+    const size = buffer.readUnsignedShort();
 
     const pool = new Array<Entry | null>(size);
     pool.fill(null);
 
     for (let i = 1; i < size; i++) {
-        const entry = await readSingle(reader, i);
+        const entry = readSingle(buffer, i);
         pool[i] = entry;
 
         if (entry.type === ConstantType.DOUBLE || entry.type === ConstantType.LONG) {
@@ -144,65 +140,76 @@ export const read = async (reader: Reader): Promise<Pool> => {
     return pool;
 };
 
-const writeSingle = async (writer: Writer, entry: Entry) => {
-    await writer.byte(entry.type);
+const writeSingle = (buffer: MutableByteBuffer, entry: Entry) => {
+    buffer.writeUnsignedByte(entry.type);
     switch (entry.type) {
         case ConstantType.UTF8:
-            return writer.utf((entry as UTF8Entry).value);
+            const utf8Entry = entry as UTF8Entry;
+
+            buffer.writeUnsignedShort(utf8Entry.length);
+            buffer.write(utf8Entry.data.buffer);
+            break;
         case ConstantType.INTEGER:
-            return writer.integer((entry as IntegerEntry).value);
+            buffer.writeInt((entry as NumericEntry).value);
+            break;
         case ConstantType.FLOAT:
-        case ConstantType.DOUBLE:
-            return writer.bytes((entry as FPEntry).value);
+            buffer.writeFloat((entry as NumericEntry).value);
+            break;
         case ConstantType.LONG:
-            return writer.long((entry as LongEntry).value);
+        case ConstantType.DOUBLE:
+            buffer.write((entry as WideNumericEntry).data.buffer);
+            break;
         case ConstantType.CLASS:
-            return writer.short((entry as ClassEntry).name);
+            buffer.writeUnsignedShort((entry as ClassEntry).name);
+            break;
         case ConstantType.STRING:
-            return writer.short((entry as StringEntry).data);
+            buffer.writeUnsignedShort((entry as StringEntry).data);
+            break;
         case ConstantType.METHOD_TYPE:
-            return writer.short((entry as MethodTypeEntry).descriptor);
+            buffer.writeUnsignedShort((entry as MethodTypeEntry).descriptor);
+            break;
         case ConstantType.MODULE:
         case ConstantType.PACKAGE:
-            return writer.short((entry as ModularEntry).name);
+            buffer.writeUnsignedShort((entry as ModularEntry).name);
+            break;
         case ConstantType.FIELDREF:
         case ConstantType.METHODREF:
         case ConstantType.INTERFACE_METHODREF:
             const refEntry = entry as RefEntry;
 
-            await writer.short(refEntry.ref);
-            await writer.short(refEntry.nameType);
+            buffer.writeUnsignedShort(refEntry.ref);
+            buffer.writeUnsignedShort(refEntry.nameType);
             break;
         case ConstantType.NAME_AND_TYPE:
             const nameTypeEntry = entry as NameTypeEntry;
 
-            await writer.short(nameTypeEntry.name);
-            await writer.short(nameTypeEntry.type_);
+            buffer.writeUnsignedShort(nameTypeEntry.name);
+            buffer.writeUnsignedShort(nameTypeEntry.type_);
             break;
         case ConstantType.DYNAMIC:
         case ConstantType.INVOKE_DYNAMIC:
             const dynamicEntry = entry as DynamicEntry;
 
-            await writer.short(dynamicEntry.bsmIndex);
-            await writer.short(dynamicEntry.nameType);
+            buffer.writeUnsignedShort(dynamicEntry.bsmIndex);
+            buffer.writeUnsignedShort(dynamicEntry.nameType);
             break;
         case ConstantType.METHOD_HANDLE:
             const handleEntry = entry as HandleEntry;
 
-            await writer.byte(handleEntry.kind);
-            await writer.short(handleEntry.ref);
+            buffer.writeUnsignedByte(handleEntry.kind);
+            buffer.writeUnsignedShort(handleEntry.ref);
             break;
         default:
             throw new Error("Unrecognized constant pool tag " + entry.type + " at position " + entry.index);
     }
 };
 
-export const write = async (writer: Writer, pool: Pool) => {
-    await writer.short(pool.length);
+export const writePool = (buffer: MutableByteBuffer, pool: Pool) => {
+    buffer.writeUnsignedShort(pool.length);
     for (let i = 1; i < pool.length; i++) {
         const entry = pool[i];
 
-        await writeSingle(writer, entry);
+        writeSingle(buffer, entry);
         if (entry.type === ConstantType.DOUBLE || entry.type === ConstantType.LONG) {
             i++; // longs and doubles take two pool entries
         }
