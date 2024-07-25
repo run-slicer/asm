@@ -81,8 +81,8 @@ const writeMember = (buffer: MutableByteBuffer, member: Member) => {
     writeAttributes(buffer, member.attributes);
 };
 
-export const write = (node: Node): ArrayBuffer => {
-    const buffer = createMutableBuffer();
+export const write = (node: Node, initialSize: number = 0): ArrayBuffer => {
+    const buffer = createMutableBuffer(initialSize);
 
     buffer.writeUnsignedInt(node.magic);
     buffer.writeUnsignedShort(node.minor);
