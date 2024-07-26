@@ -30,8 +30,8 @@ const readMember = (buffer: ByteBuffer, pool: Pool): Member => {
     };
 };
 
-export const read = (buf: ArrayBuffer): Node => {
-    const buffer = createBuffer(buf);
+export const read = (buf: Uint8Array): Node => {
+    const buffer = createBuffer(buf.buffer, buf);
 
     const node: Partial<Node> = {
         magic: buffer.readUnsignedInt(),
@@ -81,7 +81,7 @@ const writeMember = (buffer: MutableByteBuffer, member: Member) => {
     writeAttrs(buffer, member.attributes);
 };
 
-export const write = (node: Node, initialSize: number = 0): ArrayBuffer => {
+export const write = (node: Node, initialSize?: number): Uint8Array => {
     const buffer = createMutableBuffer(initialSize);
 
     buffer.writeUnsignedInt(node.magic);
@@ -109,5 +109,5 @@ export const write = (node: Node, initialSize: number = 0): ArrayBuffer => {
 
     writeAttrs(buffer, node.attributes);
 
-    return buffer.buffer;
+    return buffer.bufferView;
 };

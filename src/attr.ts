@@ -2,6 +2,8 @@ import type { Pool, UTF8Entry } from "./pool";
 import { type ByteBuffer, type MutableByteBuffer, createBuffer, createMutableBuffer } from "./buffer";
 import { type Instruction, readInsns, writeInsns } from "./insn";
 
+const TYPICAL_CODE_LENGTH = 8096 /* instructions */ + 16 /* exception table */;
+
 export interface Attribute {
     name: UTF8Entry;
     data: Uint8Array;
@@ -14,7 +16,7 @@ export interface Attributable {
 const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
     return {
         name: pool[buffer.readUnsignedShort()] as UTF8Entry,
-        data: new Uint8Array(buffer.read(buffer.readInt())),
+        data: buffer.read(buffer.readInt()),
     };
 };
 
@@ -32,7 +34,7 @@ export const readAttrs = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
 const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
     buffer.writeUnsignedShort(attr.name.index);
     buffer.writeInt(attr.data.length);
-    buffer.write(attr.data.buffer);
+    buffer.write(attr.data);
 };
 
 export const writeAttrs = (buffer: MutableByteBuffer, attrs: Attribute[]) => {
@@ -66,7 +68,7 @@ export const readCodeAttr = (attr: Attribute, pool: Pool): CodeAttribute => {
     };
 
     const codeLength = buffer.readUnsignedInt();
-    codeAttr.code = readInsns(new Uint8Array(buffer.read(codeLength)));
+    codeAttr.code = readInsns(buffer.read(codeLength));
 
     const excTableLength = buffer.readUnsignedShort();
 
@@ -85,7 +87,7 @@ export const readCodeAttr = (attr: Attribute, pool: Pool): CodeAttribute => {
     return codeAttr as CodeAttribute;
 };
 
-export const writeCodeAttr = (attr: CodeAttribute, initialSize: number = 0): Attribute => {
+export const writeCodeAttr = (attr: CodeAttribute, initialSize: number = TYPICAL_CODE_LENGTH): Attribute => {
     const buffer = createMutableBuffer(initialSize);
 
     buffer.writeUnsignedShort(attr.maxStack);
@@ -93,7 +95,7 @@ export const writeCodeAttr = (attr: CodeAttribute, initialSize: number = 0): Att
 
     const code = writeInsns(attr.code);
     buffer.writeUnsignedInt(code.length);
-    buffer.write(code.buffer);
+    buffer.write(code);
 
     buffer.writeUnsignedShort(attr.exceptionTable.length);
     for (const entry of attr.exceptionTable) {
@@ -105,5 +107,5 @@ export const writeCodeAttr = (attr: CodeAttribute, initialSize: number = 0): Att
 
     writeAttrs(buffer, attr.attributes);
 
-    return { ...attr, data: new Uint8Array(buffer.buffer) };
+    return { ...attr, data: buffer.bufferView };
 };

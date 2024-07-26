@@ -74,14 +74,14 @@ const readSingle = (buffer: ByteBuffer, index: number): Entry => {
         case ConstantType.UTF8:
             const length = buffer.readUnsignedShort();
 
-            return { type, index, length, data: new Uint8Array(buffer.read(length)) } as UTF8Entry;
+            return { type, index, length, data: buffer.read(length) } as UTF8Entry;
         case ConstantType.INTEGER:
             return { type, index, value: buffer.readInt() } as NumericEntry;
         case ConstantType.FLOAT:
             return { type, index, value: buffer.readFloat() } as NumericEntry;
         case ConstantType.LONG:
         case ConstantType.DOUBLE:
-            return { type, index, data: new Uint8Array(buffer.read(8)) } as WideNumericEntry;
+            return { type, index, data: buffer.read(8) } as WideNumericEntry;
         case ConstantType.CLASS:
             return { type, index, name: buffer.readUnsignedShort() } as ClassEntry;
         case ConstantType.STRING:
@@ -147,7 +147,7 @@ const writeSingle = (buffer: MutableByteBuffer, entry: Entry) => {
             const utf8Entry = entry as UTF8Entry;
 
             buffer.writeUnsignedShort(utf8Entry.length);
-            buffer.write(utf8Entry.data.buffer);
+            buffer.write(utf8Entry.data);
             break;
         case ConstantType.INTEGER:
             buffer.writeInt((entry as NumericEntry).value);
@@ -157,7 +157,7 @@ const writeSingle = (buffer: MutableByteBuffer, entry: Entry) => {
             break;
         case ConstantType.LONG:
         case ConstantType.DOUBLE:
-            buffer.write((entry as WideNumericEntry).data.buffer);
+            buffer.write((entry as WideNumericEntry).data);
             break;
         case ConstantType.CLASS:
             buffer.writeUnsignedShort((entry as ClassEntry).name);
