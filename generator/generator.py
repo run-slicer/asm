@@ -65,6 +65,14 @@ class Generator:
 
             f.write("}\n")
 
+            f.write("\n/** Opcode mnemonics. */\n")
+            f.write("export const MNEMONICS: Record<Opcode, string> = {\n")
+            for insn in p_input["insns"]:
+                for insn_variant in insn["values"]:
+                    f.write(f"\t[Opcode.{insn_variant['name'].upper()}]: \"{insn_variant['name']}\",\n")
+
+            f.write("};\n")
+
     def _generate_access_flags(self, p_input: dict):
         with open(self._source_path("modifier.ts"), "w", encoding="utf-8") as f:
             self._write_header(f)

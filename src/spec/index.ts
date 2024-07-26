@@ -1,4 +1,4 @@
-// This file was generated on 2024-07-24 12:04:31.242060. Do not edit, changes will be overwritten!
+// This file was generated on 2024-07-26 09:30:34.033006. Do not edit, changes will be overwritten!
 
 import { Opcode } from "./opcode";
 import { Modifier } from "./modifier";

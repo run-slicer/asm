@@ -1,5 +1,5 @@
 import { type ClassEntry, type UTF8Entry, type Pool, readPool, writePool } from "./pool";
-import { type Attributable, readAttributes, writeAttributes } from "./attr";
+import { type Attributable, readAttrs, writeAttrs } from "./attr";
 import { type ByteBuffer, type MutableByteBuffer, createBuffer, createMutableBuffer } from "./buffer";
 
 export interface Member extends Attributable {
@@ -26,7 +26,7 @@ const readMember = (buffer: ByteBuffer, pool: Pool): Member => {
         access: buffer.readUnsignedShort(),
         name: pool[buffer.readUnsignedShort()] as UTF8Entry,
         type: pool[buffer.readUnsignedShort()] as UTF8Entry,
-        attributes: readAttributes(buffer, pool),
+        attributes: readAttrs(buffer, pool),
     };
 };
 
@@ -69,7 +69,7 @@ export const read = (buf: ArrayBuffer): Node => {
         node.methods[i] = readMember(buffer, node.pool);
     }
 
-    node.attributes = readAttributes(buffer, node.pool);
+    node.attributes = readAttrs(buffer, node.pool);
 
     return node as Node;
 };
@@ -78,7 +78,7 @@ const writeMember = (buffer: MutableByteBuffer, member: Member) => {
     buffer.writeUnsignedShort(member.access);
     buffer.writeUnsignedShort(member.name.index);
     buffer.writeUnsignedShort(member.type.index);
-    writeAttributes(buffer, member.attributes);
+    writeAttrs(buffer, member.attributes);
 };
 
 export const write = (node: Node, initialSize: number = 0): ArrayBuffer => {
@@ -107,7 +107,7 @@ export const write = (node: Node, initialSize: number = 0): ArrayBuffer => {
         writeMember(buffer, method);
     }
 
-    writeAttributes(buffer, node.attributes);
+    writeAttrs(buffer, node.attributes);
 
     return buffer.buffer;
 };
