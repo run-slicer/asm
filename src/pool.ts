@@ -25,6 +25,8 @@ export interface UTF8Entry extends Entry {
     type: ConstantType.UTF8;
     length: number;
     data: Uint8Array;
+
+    decode(): string;
 }
 
 export interface StringEntry extends Entry {
@@ -68,13 +70,22 @@ export interface MethodTypeEntry extends Entry {
 
 export type Pool = (Entry | null)[];
 
+const decoder = new TextDecoder();
 const readSingle = (buffer: ByteBuffer, index: number): Entry => {
     const type = buffer.readUnsignedByte();
     switch (type) {
         case ConstantType.UTF8:
             const length = buffer.readUnsignedShort();
 
-            return { type, index, length, data: buffer.read(length) } as UTF8Entry;
+            return {
+                type,
+                index,
+                length,
+                data: buffer.read(length),
+                decode(): string {
+                    return decoder.decode(this.data);
+                },
+            } as UTF8Entry;
         case ConstantType.INTEGER:
             return { type, index, value: buffer.readInt() } as NumericEntry;
         case ConstantType.FLOAT:

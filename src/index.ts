@@ -1,6 +1,7 @@
 import { type ClassEntry, type UTF8Entry, type Pool, readPool, writePool } from "./pool";
-import { type Attributable, readAttrs, writeAttrs } from "./attr";
+import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./attr";
 import { type ByteBuffer, type MutableByteBuffer, createBuffer, createMutableBuffer } from "./buffer";
+import { AttributeType } from "./spec";
 
 export interface Member extends Attributable {
     access: number;
@@ -27,11 +28,14 @@ const readMember = (buffer: ByteBuffer, pool: Pool): Member => {
         name: pool[buffer.readUnsignedShort()] as UTF8Entry,
         type: pool[buffer.readUnsignedShort()] as UTF8Entry,
         attributes: readAttrs(buffer, pool),
+        attribute(type: AttributeType): Attribute | null {
+            return this.attributes.find((a: Attribute) => type === a.name.decode()) || null;
+        }
     };
 };
 
 export const read = (buf: Uint8Array): Node => {
-    const buffer = createBuffer(buf.buffer, buf);
+    const buffer = createBuffer(buf);
 
     const node: Partial<Node> = {
         magic: buffer.readUnsignedInt(),
@@ -39,6 +43,9 @@ export const read = (buf: Uint8Array): Node => {
         major: buffer.readUnsignedShort(),
         pool: readPool(buffer),
         access: buffer.readUnsignedShort(),
+        attribute(type: AttributeType): Attribute | null {
+            return this.attributes.find((a: Attribute) => type === a.name.decode()) || null;
+        }
     };
 
     node.thisClass = node.pool[buffer.readUnsignedShort()] as ClassEntry;

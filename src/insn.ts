@@ -255,7 +255,7 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
                 break;
             default:
                 const length = operandLengths[opcode];
-                if (!length) {
+                if (length === undefined) { // 0/1 can be interpreted as a boolean
                     throw new Error(`Unrecognized opcode ${opcode} at position ${insnOffset}`);
                 }
 

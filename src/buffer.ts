@@ -31,11 +31,11 @@ export interface MutableByteBuffer extends ByteBuffer {
     writeFloat(v: number): void;
 }
 
-export const createBuffer = (buffer: ArrayBuffer, bufferView: Uint8Array = new Uint8Array(buffer)): ByteBuffer => {
+export const createBuffer = (buf: Uint8Array): ByteBuffer => {
     return {
-        buffer,
-        bufferView,
-        view: new DataView(buffer),
+        buffer: buf.buffer,
+        bufferView: buf,
+        view: new DataView(buf.buffer),
         offset: 0,
 
         read(n: number): Uint8Array {
@@ -89,10 +89,8 @@ export const createBuffer = (buffer: ArrayBuffer, bufferView: Uint8Array = new U
 };
 
 export const createMutableBuffer = (initialSize: number = DEFAULT_BUFFER_SIZE): MutableByteBuffer => {
-    const initialBuffer = new ArrayBuffer(initialSize);
-
     return {
-        ...createBuffer(initialBuffer, new Uint8Array(initialBuffer, 0, 0)),
+        ...createBuffer(new Uint8Array(initialSize)),
 
         ensureCapacity(needed: number): void {
             if (needed <= 0) {

@@ -11,7 +11,7 @@ describe("reader", () => {
 
         expect(result.magic).equal(0xcafebabe);
 
-        const name = new TextDecoder().decode((result.pool[result.thisClass.name] as UTF8Entry).data);
+        const name = (result.pool[result.thisClass.name] as UTF8Entry).decode();
         expect(name).equal("sample/string/StringsLong");
 
         // for (const attribute of result.attributes) {

@@ -1,48 +1,10 @@
-import type { Pool, UTF8Entry } from "./pool";
-import { type ByteBuffer, type MutableByteBuffer, createBuffer, createMutableBuffer } from "./buffer";
-import { type Instruction, readInsns, writeInsns } from "./insn";
+import { type Instruction, readInsns, writeInsns } from "../insn";
+import type { Pool } from "../pool";
+import { createBuffer, createMutableBuffer } from "../buffer";
+import { AttributeType } from "../spec";
+import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./";
 
 const TYPICAL_CODE_LENGTH = 8096 /* instructions */ + 16 /* exception table */;
-
-export interface Attribute {
-    name: UTF8Entry;
-    data: Uint8Array;
-}
-
-export interface Attributable {
-    attributes: Attribute[];
-}
-
-const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
-    return {
-        name: pool[buffer.readUnsignedShort()] as UTF8Entry,
-        data: buffer.read(buffer.readInt()),
-    };
-};
-
-export const readAttrs = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
-    const attributesCount = buffer.readUnsignedShort();
-
-    const attributes = new Array<Attribute>(attributesCount);
-    for (let i = 0; i < attributesCount; i++) {
-        attributes[i] = readSingle(buffer, pool);
-    }
-
-    return attributes;
-};
-
-const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
-    buffer.writeUnsignedShort(attr.name.index);
-    buffer.writeInt(attr.data.length);
-    buffer.write(attr.data);
-};
-
-export const writeAttrs = (buffer: MutableByteBuffer, attrs: Attribute[]) => {
-    buffer.writeUnsignedShort(attrs.length);
-    for (const attr of attrs) {
-        writeSingle(buffer, attr);
-    }
-};
 
 export interface ExceptionTableEntry {
     startPC: number;
@@ -54,21 +16,24 @@ export interface ExceptionTableEntry {
 export interface CodeAttribute extends Attribute, Attributable {
     maxStack: number;
     maxLocals: number;
-    code: Instruction[];
+    insns: Instruction[];
     exceptionTable: ExceptionTableEntry[];
 }
 
-export const readCodeAttr = (attr: Attribute, pool: Pool): CodeAttribute => {
-    const buffer = createBuffer(attr.data.buffer);
+export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
+    const buffer = createBuffer(attr.data);
 
     const codeAttr: Partial<CodeAttribute> = {
         ...attr,
         maxStack: buffer.readUnsignedShort(),
         maxLocals: buffer.readUnsignedShort(),
+        attribute(type: AttributeType): Attribute | null {
+            return this.attributes.find((a: Attribute) => type === a.name.decode()) || null;
+        }
     };
 
     const codeLength = buffer.readUnsignedInt();
-    codeAttr.code = readInsns(buffer.read(codeLength));
+    codeAttr.insns = readInsns(buffer.read(codeLength));
 
     const excTableLength = buffer.readUnsignedShort();
 
@@ -87,13 +52,13 @@ export const readCodeAttr = (attr: Attribute, pool: Pool): CodeAttribute => {
     return codeAttr as CodeAttribute;
 };
 
-export const writeCodeAttr = (attr: CodeAttribute, initialSize: number = TYPICAL_CODE_LENGTH): Attribute => {
+export const writeCode = (attr: CodeAttribute, initialSize: number = TYPICAL_CODE_LENGTH): Attribute => {
     const buffer = createMutableBuffer(initialSize);
 
     buffer.writeUnsignedShort(attr.maxStack);
     buffer.writeUnsignedShort(attr.maxLocals);
 
-    const code = writeInsns(attr.code);
+    const code = writeInsns(attr.insns);
     buffer.writeUnsignedInt(code.length);
     buffer.write(code);
 
