@@ -15,7 +15,7 @@ def to_upper_snake(s: str) -> str:
 
 class Generator:
     MEMBERS = {
-        "./opcode": ["Opcode"],
+        "./opcode": ["Opcode", "OPCODE_MNEMONICS"],
         "./modifier": ["Modifier"],
         "./version": ["Version"],
         "./attr_type": ["AttributeType"],
@@ -66,7 +66,7 @@ class Generator:
             f.write("}\n")
 
             f.write("\n/** Opcode mnemonics. */\n")
-            f.write("export const MNEMONICS: Record<Opcode, string> = {\n")
+            f.write("export const OPCODE_MNEMONICS: Record<Opcode, string> = {\n")
             for insn in p_input["insns"]:
                 for insn_variant in insn["values"]:
                     f.write(f"\t[Opcode.{insn_variant['name'].upper()}]: \"{insn_variant['name']}\",\n")

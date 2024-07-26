@@ -105,7 +105,5 @@ export const writeCodeAttr = (attr: CodeAttribute, initialSize: number = 0): Att
 
     writeAttrs(buffer, attr.attributes);
 
-    // update attribute
-    attr.data = new Uint8Array(buffer.buffer);
-    return attr;
+    return { ...attr, data: new Uint8Array(buffer.buffer) };
 };
