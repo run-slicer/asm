@@ -223,21 +223,30 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
         switch (opcode) {
             case Opcode.LOOKUPSWITCH:
             case Opcode.TABLESWITCH: {
-                offset += (offset % 4) ? 4 - (offset % 4) : 0; // padding
+                offset += offset % 4 ? 4 - (offset % 4) : 0; // padding
 
                 if (opcode === Opcode.TABLESWITCH) {
-                    const low =  (data[offset+4] << 24) | (data[offset+5] << 16) |
-                        (data[offset+6] << 8 ) | (data[offset+7]);
-                    const high = (data[offset+8] << 24) | (data[offset+9] << 16) |
-                        (data[offset+10] << 8) | (data[offset+11]);
-                    const numJumpOffsets = (high - low) + 1;
+                    const low =
+                        (data[offset + 4] << 24) |
+                        (data[offset + 5] << 16) |
+                        (data[offset + 6] << 8) |
+                        data[offset + 7];
+                    const high =
+                        (data[offset + 8] << 24) |
+                        (data[offset + 9] << 16) |
+                        (data[offset + 10] << 8) |
+                        data[offset + 11];
+                    const numJumpOffsets = high - low + 1;
 
-                    operandLength = (3 * 4) + (numJumpOffsets * 4);
+                    operandLength = 3 * 4 + numJumpOffsets * 4;
                 } else {
-                    const numPairs = (data[offset+4] << 24) | (data[offset+5] << 16) |
-                        (data[offset+6] << 8)  | (data[offset+7]);
+                    const numPairs =
+                        (data[offset + 4] << 24) |
+                        (data[offset + 5] << 16) |
+                        (data[offset + 6] << 8) |
+                        data[offset + 7];
 
-                    operandLength = 8 + (numPairs * 8);
+                    operandLength = 8 + numPairs * 8;
                 }
                 break;
             }
@@ -268,7 +277,7 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
         data.push(opcode);
 
         if (opcode === Opcode.TABLESWITCH || opcode === Opcode.LOOKUPSWITCH) {
-            let padding = (data.length % 4) ? 4 - (data.length % 4) : 0;
+            let padding = data.length % 4 ? 4 - (data.length % 4) : 0;
             while (padding-- > 0) {
                 data.push(0);
             }
