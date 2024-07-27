@@ -1,7 +1,6 @@
 import { type ClassEntry, type UTF8Entry, type Pool, readPool, writePool } from "./pool";
-import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./attr";
+import { type Attributable, readAttrs, writeAttrs } from "./attr";
 import { type ByteBuffer, type MutableByteBuffer, createBuffer, createMutableBuffer } from "./buffer";
-import { AttributeType } from "./spec";
 
 export interface DirtyMarkable {
     dirty: boolean;
@@ -31,10 +30,7 @@ const readMember = (buffer: ByteBuffer, pool: Pool): Member => {
         access: buffer.readUnsignedShort(),
         name: pool[buffer.readUnsignedShort()] as UTF8Entry,
         type: pool[buffer.readUnsignedShort()] as UTF8Entry,
-        attributes: readAttrs(buffer, pool),
-        attribute<T extends Attribute>(type: AttributeType): T | null {
-            return this.attributes.find((a: Attribute) => type === a.name) || null;
-        },
+        attrs: readAttrs(buffer, pool),
     };
 };
 
@@ -47,9 +43,6 @@ export const read = (buf: Uint8Array): Node => {
         major: buffer.readUnsignedShort(),
         pool: readPool(buffer),
         access: buffer.readUnsignedShort(),
-        attribute<T extends Attribute>(type: AttributeType): T | null {
-            return this.attributes.find((a: Attribute) => type === a.name) || null;
-        },
     };
 
     node.thisClass = node.pool[buffer.readUnsignedShort()] as ClassEntry;
@@ -80,7 +73,7 @@ export const read = (buf: Uint8Array): Node => {
         node.methods[i] = readMember(buffer, node.pool);
     }
 
-    node.attributes = readAttrs(buffer, node.pool);
+    node.attrs = readAttrs(buffer, node.pool);
 
     return node as Node;
 };
@@ -89,7 +82,7 @@ const writeMember = (buffer: MutableByteBuffer, member: Member) => {
     buffer.writeUnsignedShort(member.access);
     buffer.writeUnsignedShort(member.name.index);
     buffer.writeUnsignedShort(member.type.index);
-    writeAttrs(buffer, member.attributes);
+    writeAttrs(buffer, member.attrs);
 };
 
 export const write = (node: Node, initialSize?: number): Uint8Array => {
@@ -118,7 +111,7 @@ export const write = (node: Node, initialSize?: number): Uint8Array => {
         writeMember(buffer, method);
     }
 
-    writeAttrs(buffer, node.attributes);
+    writeAttrs(buffer, node.attrs);
 
     return buffer.bufferView;
 };

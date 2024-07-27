@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect } from "chai";
 import type { UTF8Entry } from "./pool";
 import { read, write } from "./";
+import type { Attributable } from "./attr";
 
 describe("reader", () => {
     it("read samples/zkm/sample/string/StringsLong.class", async () => {
@@ -20,11 +21,25 @@ describe("reader", () => {
     });
 });
 
+const markDirty = (attrib: Attributable) => {
+    for (const attr of attrib.attrs) {
+        attr.dirty = true;
+    }
+};
+
 describe("reader+writer", () => {
     const register = (path: string) => {
         const expected = new Uint8Array(readFileSync(path));
         it(`round-trip ${path}`, () => {
-            const result = write(read(expected));
+            const node = read(expected);
+
+            // force attribute rewrite
+            markDirty(node);
+            for (const member of [...node.fields, ...node.methods]) {
+                markDirty(member);
+            }
+
+            const result = write(node);
 
             expect(result).deep.equal(expected);
         });

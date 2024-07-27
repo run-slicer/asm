@@ -1,7 +1,6 @@
 import { type Instruction, readInsns, writeInsns } from "../insn";
 import type { Pool } from "../pool";
 import { createBuffer, createMutableBuffer } from "../buffer";
-import { AttributeType } from "../spec";
 import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./";
 
 const TYPICAL_CODE_LENGTH = 8096 /* instructions */ + 16; /* exception table */
@@ -27,9 +26,6 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
         ...attr,
         maxStack: buffer.readUnsignedShort(),
         maxLocals: buffer.readUnsignedShort(),
-        attribute<T extends Attribute>(type: AttributeType): T | null {
-            return this.attributes.find((a: Attribute) => type === a.name) || null;
-        },
     };
 
     const codeLength = buffer.readUnsignedInt();
@@ -47,7 +43,7 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
         };
     }
 
-    codeAttr.attributes = readAttrs(buffer, pool);
+    codeAttr.attrs = readAttrs(buffer, pool);
 
     return codeAttr as CodeAttribute;
 };
@@ -70,7 +66,7 @@ export const writeCode = (attr: CodeAttribute, initialSize: number = TYPICAL_COD
         buffer.writeUnsignedShort(entry.catchType);
     }
 
-    writeAttrs(buffer, attr.attributes);
+    writeAttrs(buffer, attr.attrs);
 
     return buffer.bufferView;
 };

@@ -71,7 +71,7 @@ const markReachable = (code: Instruction[], offsets: Set<number>, offset: number
     }
 };
 
-export const analyzeReachable = (attr: CodeAttribute): number[] => {
+export const scanReachable = (attr: CodeAttribute): number[] => {
     const offsets = new Set<number>();
     markReachable(attr.insns, offsets, 0);
 
@@ -89,4 +89,39 @@ export const analyzeReachable = (attr: CodeAttribute): number[] => {
     } while (handlerReachable);
 
     return Array.from(offsets);
+};
+
+export const removeUnreachable = (attr: CodeAttribute): CodeAttribute => {
+    const offsets = scanReachable(attr);
+    if (offsets.length === attr.insns.length) {
+        return attr; // everything is reachable
+    }
+
+    const insns: Instruction[] = [];
+    for (let i = 0; i < attr.insns.length; i++) {
+        const insn = attr.insns[i];
+        if (!offsets.includes(insn.offset)) {
+            // not reachable
+
+            const nextInsn = attr.insns[i + 1];
+            for (let j = 0; j < insn.length; j++) {
+                let opcode = Opcode.NOP;
+                if (insn.length - 1 === j /* last index */ && !nextInsn) {
+                    opcode = Opcode.ATHROW; // execution fell off, throw
+                }
+
+                insns.push({
+                    opcode,
+                    operands: new Uint8Array(0),
+                    offset: insn.offset + j,
+                    length: 1,
+                    dirty: false,
+                });
+            }
+        } else {
+            insns.push(insn);
+        }
+    }
+
+    return { ...attr, insns, dirty: true };
 };

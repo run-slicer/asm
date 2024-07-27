@@ -212,6 +212,7 @@ export interface Instruction extends DirtyMarkable {
     opcode: number;
     operands: Uint8Array;
     offset: number;
+    length: number;
 }
 
 export const readInsns = (data: Uint8Array): Instruction[] => {
@@ -267,13 +268,14 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
                 break;
         }
 
+        offset += operandLength;
         insns.push({
             opcode,
-            operands: data.subarray(offset, offset + operandLength),
+            operands: data.subarray(offset - operandLength, offset),
             offset: insnOffset,
+            length: offset - insnOffset,
             dirty: false,
         });
-        offset += operandLength;
     }
 
     // second pass: read operands
@@ -319,6 +321,10 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
     for (let i = 0; i < insns.length; i++) {
         let insn = insns[i];
 
+        // if there was a change in an earlier instruction's length,
+        // then the offset of each coming instruction needs to be renumbered
+        insn.offset = data.length;
+
         data.push(insn.opcode);
         if (insn.opcode === Opcode.TABLESWITCH || insn.opcode === Opcode.LOOKUPSWITCH) {
             let padding = data.length % 4 ? 4 - (data.length % 4) : 0;
@@ -362,6 +368,7 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
         }
 
         data.push(...insn.operands);
+        insn.length = data.length - insn.offset;
     }
 
     return new Uint8Array(data);

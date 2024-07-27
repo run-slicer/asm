@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { read } from "../";
-import { analyzeReachable } from "./peephole";
+import { scanReachable } from "./reach";
 import { AttributeType } from "../spec";
 import type { CodeAttribute } from "../attr";
 import { expect } from "chai";
@@ -8,23 +8,24 @@ import { expect } from "chai";
 describe("reachability", () => {
     const register = (path: string, expected: number) => {
         const data = readFileSync(path);
-        it(`analyze ${path}`, () => {
+        it(`scan ${path}`, () => {
             const node = read(data);
 
             for (const method of node.methods) {
-                const attr: CodeAttribute = method.attribute(AttributeType.CODE);
+                const attr = method.attrs.find((a) => a.name === AttributeType.CODE);
                 if (!attr) {
                     continue;
                 }
 
-                const offsets = analyzeReachable(attr);
+                const code = attr as CodeAttribute;
+                const offsets = scanReachable(code);
 
-                const unreachable = attr.insns.filter((i) => !offsets.includes(i.offset));
+                const unreachable = code.insns.filter((i) => !offsets.includes(i.offset));
                 expect(unreachable.length).equal(expected);
             }
         });
     };
 
     register("samples/jasm/unreachable/Example.class", 0);
-    register("samples/jasm/unreachable/ExampleUnreachable.class", 9); // ASM adds removes dead code, so this removes nops and athrow
+    register("samples/jasm/unreachable/ExampleUnreachable.class", 9);
 });

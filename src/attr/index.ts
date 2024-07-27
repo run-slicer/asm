@@ -11,9 +11,7 @@ export interface Attribute extends DirtyMarkable {
 }
 
 export interface Attributable {
-    attributes: Attribute[];
-
-    attribute<T extends Attribute>(type: string): T | null;
+    attrs: Attribute[];
 }
 
 const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
