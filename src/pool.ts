@@ -23,7 +23,6 @@ export interface ClassEntry extends Entry {
 
 export interface UTF8Entry extends Entry {
     type: ConstantType.UTF8;
-    length: number;
     data: Uint8Array;
 
     decode(): string;
@@ -80,7 +79,6 @@ const readSingle = (buffer: ByteBuffer, index: number): Entry => {
             return {
                 type,
                 index,
-                length,
                 data: buffer.read(length),
                 decode(): string {
                     return decoder.decode(this.data);
@@ -157,7 +155,7 @@ const writeSingle = (buffer: MutableByteBuffer, entry: Entry) => {
         case ConstantType.UTF8:
             const utf8Entry = entry as UTF8Entry;
 
-            buffer.writeUnsignedShort(utf8Entry.length);
+            buffer.writeUnsignedShort(utf8Entry.data.length);
             buffer.write(utf8Entry.data);
             break;
         case ConstantType.INTEGER:

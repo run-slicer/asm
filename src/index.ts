@@ -29,7 +29,7 @@ const readMember = (buffer: ByteBuffer, pool: Pool): Member => {
         type: pool[buffer.readUnsignedShort()] as UTF8Entry,
         attributes: readAttrs(buffer, pool),
         attribute(type: AttributeType): Attribute | null {
-            return this.attributes.find((a: Attribute) => type === a.name.decode()) || null;
+            return this.attributes.find((a: Attribute) => type === a.name) || null;
         }
     };
 };
@@ -44,7 +44,7 @@ export const read = (buf: Uint8Array): Node => {
         pool: readPool(buffer),
         access: buffer.readUnsignedShort(),
         attribute(type: AttributeType): Attribute | null {
-            return this.attributes.find((a: Attribute) => type === a.name.decode()) || null;
+            return this.attributes.find((a: Attribute) => type === a.name) || null;
         }
     };
 

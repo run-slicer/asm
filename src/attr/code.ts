@@ -28,7 +28,7 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
         maxStack: buffer.readUnsignedShort(),
         maxLocals: buffer.readUnsignedShort(),
         attribute(type: AttributeType): Attribute | null {
-            return this.attributes.find((a: Attribute) => type === a.name.decode()) || null;
+            return this.attributes.find((a: Attribute) => type === a.name) || null;
         }
     };
 
@@ -52,7 +52,7 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
     return codeAttr as CodeAttribute;
 };
 
-export const writeCode = (attr: CodeAttribute, initialSize: number = TYPICAL_CODE_LENGTH): Attribute => {
+export const writeCode = (attr: CodeAttribute, initialSize: number = TYPICAL_CODE_LENGTH): Uint8Array => {
     const buffer = createMutableBuffer(initialSize);
 
     buffer.writeUnsignedShort(attr.maxStack);
@@ -72,5 +72,5 @@ export const writeCode = (attr: CodeAttribute, initialSize: number = TYPICAL_COD
 
     writeAttrs(buffer, attr.attributes);
 
-    return { ...attr, data: buffer.bufferView };
+    return buffer.bufferView;
 };

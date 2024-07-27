@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { read } from "../index";
 import { analyzeReachable } from "./peephole";
 import { AttributeType } from "../spec";
-import { readCode } from "../attr/code";
+import type { CodeAttribute } from "../attr/code";
 
 describe("reachability", () => {
     const register = (path: string) => {
@@ -19,7 +19,7 @@ describe("reachability", () => {
                     continue;
                 }
 
-                const code = readCode(attr, node.pool);
+                const code = attr as CodeAttribute;
                 const offsets = analyzeReachable(code);
 
                 const unreachable = code.insns.filter((i) => !offsets.includes(i.offset));

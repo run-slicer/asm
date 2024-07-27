@@ -1,23 +1,39 @@
 import type { Pool, UTF8Entry } from "../pool";
-import  { AttributeType } from "../spec";
 import { type ByteBuffer, type MutableByteBuffer } from "../buffer";
+import { AttributeType } from "../spec";
+import { type CodeAttribute, readCode, writeCode } from "./code";
 
 export interface Attribute {
-    name: UTF8Entry;
+    name: string; // built-ins => AttributeType
+    nameEntry: UTF8Entry;
     data: Uint8Array;
+    dirty: boolean;
 }
 
 export interface Attributable {
     attributes: Attribute[];
 
-    attribute(type: AttributeType): Attribute | null;
+    attribute(type: string): Attribute | null;
 }
 
 const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
-    return {
-        name: pool[buffer.readUnsignedShort()] as UTF8Entry,
-        data: buffer.read(buffer.readInt()),
+    const nameEntry = pool[buffer.readUnsignedShort()] as UTF8Entry;
+    const data = buffer.read(buffer.readInt());
+
+    let attr: Attribute = {
+        name: nameEntry.decode(),
+        dirty: false,
+        data,
+        nameEntry,
     };
+    switch (attr.name) {
+        case AttributeType.CODE: {
+            attr = readCode(attr, pool);
+            break;
+        }
+    }
+
+    return attr;
 };
 
 export const readAttrs = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
@@ -32,8 +48,20 @@ export const readAttrs = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
 };
 
 const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
-    buffer.writeUnsignedShort(attr.name.index);
+    buffer.writeUnsignedShort(attr.nameEntry.index);
     buffer.writeInt(attr.data.length);
+
+    if (attr.dirty) { // rebuild data if dirty
+        attr.name = attr.nameEntry.decode();
+        switch (attr.name) {
+            case AttributeType.CODE: {
+                attr.data = writeCode(attr as CodeAttribute);
+                break;
+            }
+        }
+
+        attr.dirty = false;
+    }
     buffer.write(attr.data);
 };
 
