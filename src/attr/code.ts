@@ -27,7 +27,7 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
         ...attr,
         maxStack: buffer.readUnsignedShort(),
         maxLocals: buffer.readUnsignedShort(),
-        attribute(type: AttributeType): Attribute | null {
+        attribute<T extends Attribute>(type: AttributeType): T | null {
             return this.attributes.find((a: Attribute) => type === a.name) || null;
         }
     };

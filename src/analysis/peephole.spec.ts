@@ -1,49 +1,31 @@
-import { type Dirent, opendirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { read } from "../index";
 import { analyzeReachable } from "./peephole";
 import { AttributeType } from "../spec";
 import type { CodeAttribute } from "../attr/code";
+import { expect } from "chai";
 
 describe("reachability", () => {
-    const register = (path: string) => {
-        const expected = readFileSync(path);
+    const register = (path: string, expected: number) => {
+        const data = readFileSync(path);
         it(`analyze ${path}`, () => {
-            const node = read(expected);
+            const node = read(data);
 
             for (const method of node.methods) {
-                const name = method.name.decode() + method.type.decode();
-
-                const attr = method.attribute(AttributeType.CODE);
+                const attr = method.attribute<CodeAttribute>(AttributeType.CODE);
                 if (!attr) {
                     continue;
                 }
 
-                const code = attr as CodeAttribute;
-                const offsets = analyzeReachable(code);
+                const offsets = analyzeReachable(attr);
 
-                const unreachable = code.insns.filter((i) => !offsets.includes(i.offset));
-                console.log(`removed ${unreachable.length} unreachable instructions from method ${name}`);
+                const unreachable = attr.insns.filter((i) => !offsets.includes(i.offset));
+                console.log(unreachable);
+                expect(unreachable.length).equal(expected);
             }
         });
     };
 
-    const walk = (path: string) => {
-        const dir = opendirSync(path);
-
-        let entry: Dirent | null;
-        while ((entry = dir.readSync()) !== null) {
-            const childPath = join(path, entry.name);
-
-            if (entry.isFile() && entry.name.endsWith(".class")) {
-                register(childPath);
-            } else if (entry.isDirectory()) {
-                walk(childPath);
-            }
-        }
-
-        dir.closeSync();
-    };
-
-    walk("./samples");
+    register("samples/jasm/unreachable/Example.class", 0);
+    register("samples/jasm/unreachable/ExampleUnreachable.class", 9); // ASM adds removes dead code, so this removes nops and athrow
 });

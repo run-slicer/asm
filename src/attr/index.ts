@@ -13,7 +13,7 @@ export interface Attribute {
 export interface Attributable {
     attributes: Attribute[];
 
-    attribute(type: string): Attribute | null;
+    attribute<T extends Attribute>(type: string): T | null;
 }
 
 const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
