@@ -1,39 +1,9 @@
-import type { CodeAttribute } from "../attr/code";
-import type { Instruction } from "../insn";
+import type { CodeAttribute } from "../attr";
+import type { BranchInstruction, Instruction, SwitchInstruction } from "../insn";
 import { Opcode } from "../spec";
-import { createBuffer } from "../buffer";
-
-const readSwitch = (opcode: Opcode, operands: Uint8Array): [number, number[]] => {
-    const buffer = createBuffer(operands);
-
-    const defaultOffset = buffer.readInt();
-    let jumpOffsets: number[];
-
-    if (opcode === Opcode.TABLESWITCH) {
-        const lowCase = buffer.readInt();
-        const highCase = buffer.readInt();
-
-        jumpOffsets = new Array<number>(highCase - lowCase + 1);
-        for (let i = 0; i < jumpOffsets.length; i++) {
-            jumpOffsets[i] = buffer.readInt();
-        }
-    } else if (opcode === Opcode.LOOKUPSWITCH) {
-        const jumpOffsetCount = buffer.readInt();
-
-        jumpOffsets = new Array<number>(jumpOffsetCount);
-        for (let i = 0; i < jumpOffsets.length; i++) {
-            buffer.readInt(); // case
-            jumpOffsets[i] = buffer.readInt();
-        }
-    } else {
-        throw new Error(`Unrecognized switch opcode ${opcode}`);
-    }
-
-    return [defaultOffset, jumpOffsets];
-};
 
 const reachableInRange = (offsets: Set<number>, start: number, end: number): boolean => {
-    for (let offset = start; offset < end; offset++){
+    for (let offset = start; offset < end; offset++) {
         if (offsets.has(offset)) {
             return true;
         }
@@ -77,14 +47,7 @@ const markReachable = (code: Instruction[], offsets: Set<number>, offset: number
             case Opcode.JSR_W:
             case Opcode.IFNULL:
             case Opcode.IFNONNULL: {
-                const buffer = createBuffer(insn.operands);
-
-                let branchOffset: number;
-                if (insn.opcode === Opcode.GOTO_W || insn.opcode === Opcode.JSR_W) {
-                    branchOffset = buffer.readInt();
-                } else {
-                    branchOffset = buffer.readShort();
-                }
+                const { branchOffset } = insn as BranchInstruction;
 
                 markReachable(code, offsets, insn.offset + branchOffset);
                 if (insn.opcode === Opcode.GOTO || insn.opcode === Opcode.GOTO_W) {
@@ -95,7 +58,7 @@ const markReachable = (code: Instruction[], offsets: Set<number>, offset: number
             }
             case Opcode.TABLESWITCH:
             case Opcode.LOOKUPSWITCH: {
-                const [defaultOffset, jumpOffsets] = readSwitch(insn.opcode, insn.operands);
+                const { defaultOffset, jumpOffsets } = insn as SwitchInstruction;
 
                 markReachable(code, offsets, insn.offset + defaultOffset);
                 for (const jumpOffset of jumpOffsets) {

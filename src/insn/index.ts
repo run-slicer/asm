@@ -1,6 +1,9 @@
-import { Opcode } from "./spec";
+import { Opcode } from "../spec";
+import { type SwitchInstruction, readSwitch, writeSwitch } from "./switch";
+import { type BranchInstruction, readBranch, writeBranch } from "./branch";
+import type { DirtyMarkable } from "../";
 
-const operandLengths: Record<Opcode, number> = {
+const operandLengths: Record<number, number> = {
     [Opcode.NOP]: 0,
     [Opcode.ACONST_NULL]: 0,
     [Opcode.ICONST_M1]: 0,
@@ -205,8 +208,8 @@ const operandLengths: Record<Opcode, number> = {
     [Opcode.JSR_W]: 4,
 };
 
-export interface Instruction {
-    opcode: Opcode;
+export interface Instruction extends DirtyMarkable {
+    opcode: number;
     operands: Uint8Array;
     offset: number;
 }
@@ -255,7 +258,8 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
                 break;
             default:
                 const length = operandLengths[opcode];
-                if (length === undefined) { // 0/1 can be interpreted as a boolean
+                if (length === undefined) {
+                    // 0/1 can be interpreted as a boolean
                     throw new Error(`Unrecognized opcode ${opcode} at position ${insnOffset}`);
                 }
 
@@ -263,8 +267,47 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
                 break;
         }
 
-        insns.push({ opcode, operands: data.subarray(offset, offset + operandLength), offset: insnOffset });
+        insns.push({
+            opcode,
+            operands: data.subarray(offset, offset + operandLength),
+            offset: insnOffset,
+            dirty: false,
+        });
         offset += operandLength;
+    }
+
+    // second pass: read operands
+    for (let i = 0; i < insns.length; i++) {
+        const insn = insns[i];
+
+        switch (insn.opcode) {
+            case Opcode.IFEQ:
+            case Opcode.IFNE:
+            case Opcode.IFLT:
+            case Opcode.IFGE:
+            case Opcode.IFGT:
+            case Opcode.IFLE:
+            case Opcode.IF_ICMPEQ:
+            case Opcode.IF_ICMPNE:
+            case Opcode.IF_ICMPLT:
+            case Opcode.IF_ICMPGE:
+            case Opcode.IF_ICMPGT:
+            case Opcode.IF_ICMPLE:
+            case Opcode.GOTO:
+            case Opcode.GOTO_W:
+            case Opcode.JSR:
+            case Opcode.JSR_W:
+            case Opcode.IFNULL:
+            case Opcode.IFNONNULL: {
+                insns[i] = readBranch(insn);
+                break;
+            }
+            case Opcode.TABLESWITCH:
+            case Opcode.LOOKUPSWITCH: {
+                insns[i] = readSwitch(insn);
+                break;
+            }
+        }
     }
 
     return insns;
@@ -273,18 +316,55 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
 export const writeInsns = (insns: Instruction[]): Uint8Array => {
     const data: number[] = [];
 
-    for (const { opcode, operands } of insns) {
-        data.push(opcode);
+    for (let i = 0; i < insns.length; i++) {
+        let insn = insns[i];
 
-        if (opcode === Opcode.TABLESWITCH || opcode === Opcode.LOOKUPSWITCH) {
+        data.push(insn.opcode);
+        if (insn.opcode === Opcode.TABLESWITCH || insn.opcode === Opcode.LOOKUPSWITCH) {
             let padding = data.length % 4 ? 4 - (data.length % 4) : 0;
             while (padding-- > 0) {
                 data.push(0);
             }
         }
 
-        data.push(...operands);
+        if (insn.dirty) {
+            // rebuild data if dirty
+            switch (insn.opcode) {
+                case Opcode.IFEQ:
+                case Opcode.IFNE:
+                case Opcode.IFLT:
+                case Opcode.IFGE:
+                case Opcode.IFGT:
+                case Opcode.IFLE:
+                case Opcode.IF_ICMPEQ:
+                case Opcode.IF_ICMPNE:
+                case Opcode.IF_ICMPLT:
+                case Opcode.IF_ICMPGE:
+                case Opcode.IF_ICMPGT:
+                case Opcode.IF_ICMPLE:
+                case Opcode.GOTO:
+                case Opcode.GOTO_W:
+                case Opcode.JSR:
+                case Opcode.JSR_W:
+                case Opcode.IFNULL:
+                case Opcode.IFNONNULL: {
+                    insn = insns[i] = writeBranch(insn as BranchInstruction);
+                    break;
+                }
+                case Opcode.TABLESWITCH:
+                case Opcode.LOOKUPSWITCH: {
+                    insn = insns[i] = writeSwitch(insn as SwitchInstruction);
+                    break;
+                }
+            }
+
+            insn.dirty = false;
+        }
+
+        data.push(...insn.operands);
     }
 
     return new Uint8Array(data);
 };
+
+export { SwitchInstruction, BranchInstruction };

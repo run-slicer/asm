@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
-import { read } from "../index";
+import { read } from "../";
 import { analyzeReachable } from "./peephole";
 import { AttributeType } from "../spec";
-import type { CodeAttribute } from "../attr/code";
+import type { CodeAttribute } from "../attr";
 import { expect } from "chai";
 
 describe("reachability", () => {
@@ -12,7 +12,7 @@ describe("reachability", () => {
             const node = read(data);
 
             for (const method of node.methods) {
-                const attr = method.attribute<CodeAttribute>(AttributeType.CODE);
+                const attr: CodeAttribute = method.attribute(AttributeType.CODE);
                 if (!attr) {
                     continue;
                 }
@@ -20,7 +20,6 @@ describe("reachability", () => {
                 const offsets = analyzeReachable(attr);
 
                 const unreachable = attr.insns.filter((i) => !offsets.includes(i.offset));
-                console.log(unreachable);
                 expect(unreachable.length).equal(expected);
             }
         });

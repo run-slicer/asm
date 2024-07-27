@@ -3,6 +3,10 @@ import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./attr
 import { type ByteBuffer, type MutableByteBuffer, createBuffer, createMutableBuffer } from "./buffer";
 import { AttributeType } from "./spec";
 
+export interface DirtyMarkable {
+    dirty: boolean;
+}
+
 export interface Member extends Attributable {
     access: number;
     name: UTF8Entry;
@@ -30,7 +34,7 @@ const readMember = (buffer: ByteBuffer, pool: Pool): Member => {
         attributes: readAttrs(buffer, pool),
         attribute<T extends Attribute>(type: AttributeType): T | null {
             return this.attributes.find((a: Attribute) => type === a.name) || null;
-        }
+        },
     };
 };
 
@@ -45,7 +49,7 @@ export const read = (buf: Uint8Array): Node => {
         access: buffer.readUnsignedShort(),
         attribute<T extends Attribute>(type: AttributeType): T | null {
             return this.attributes.find((a: Attribute) => type === a.name) || null;
-        }
+        },
     };
 
     node.thisClass = node.pool[buffer.readUnsignedShort()] as ClassEntry;

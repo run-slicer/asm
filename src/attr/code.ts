@@ -4,7 +4,7 @@ import { createBuffer, createMutableBuffer } from "../buffer";
 import { AttributeType } from "../spec";
 import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./";
 
-const TYPICAL_CODE_LENGTH = 8096 /* instructions */ + 16 /* exception table */;
+const TYPICAL_CODE_LENGTH = 8096 /* instructions */ + 16; /* exception table */
 
 export interface ExceptionTableEntry {
     startPC: number;
@@ -29,7 +29,7 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
         maxLocals: buffer.readUnsignedShort(),
         attribute<T extends Attribute>(type: AttributeType): T | null {
             return this.attributes.find((a: Attribute) => type === a.name) || null;
-        }
+        },
     };
 
     const codeLength = buffer.readUnsignedInt();

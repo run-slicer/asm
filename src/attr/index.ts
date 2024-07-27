@@ -1,13 +1,13 @@
 import type { Pool, UTF8Entry } from "../pool";
 import { type ByteBuffer, type MutableByteBuffer } from "../buffer";
 import { AttributeType } from "../spec";
-import { type CodeAttribute, readCode, writeCode } from "./code";
+import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
+import type { DirtyMarkable } from "../";
 
-export interface Attribute {
+export interface Attribute extends DirtyMarkable {
     name: string; // built-ins => AttributeType
     nameEntry: UTF8Entry;
     data: Uint8Array;
-    dirty: boolean;
 }
 
 export interface Attributable {
@@ -51,7 +51,8 @@ const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
     buffer.writeUnsignedShort(attr.nameEntry.index);
     buffer.writeInt(attr.data.length);
 
-    if (attr.dirty) { // rebuild data if dirty
+    if (attr.dirty) {
+        // rebuild data if dirty
         attr.name = attr.nameEntry.decode();
         switch (attr.name) {
             case AttributeType.CODE: {
@@ -71,3 +72,5 @@ export const writeAttrs = (buffer: MutableByteBuffer, attrs: Attribute[]) => {
         writeSingle(buffer, attr);
     }
 };
+
+export { CodeAttribute, ExceptionTableEntry };

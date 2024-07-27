@@ -98,7 +98,8 @@ export const createMutableBuffer = (initialSize: number = DEFAULT_BUFFER_SIZE): 
             }
 
             const newSize = this.offset + needed;
-            if (newSize > this.buffer.byteLength) { // resize buffer and view
+            if (newSize > this.buffer.byteLength) {
+                // resize buffer and view
                 const newBuffer = new ArrayBuffer(newSize + DEFAULT_RESIZE);
                 const newBufferView = new Uint8Array(newBuffer, 0, newSize);
                 newBufferView.set(this.bufferView);
@@ -106,7 +107,8 @@ export const createMutableBuffer = (initialSize: number = DEFAULT_BUFFER_SIZE): 
                 this.buffer = newBuffer;
                 this.bufferView = newBufferView;
                 this.view = new DataView(newBuffer);
-            } else { // resize only view
+            } else {
+                // resize only view
                 this.bufferView = new Uint8Array(this.buffer, this.bufferView.byteOffset, newSize);
             }
         },
