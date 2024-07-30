@@ -1,7 +1,7 @@
-// This file was generated on 2024-07-30 14:34:04.820728. Do not edit, changes will be overwritten!
+// This file was generated on 2024-07-30 14:53:52.456944. Do not edit, changes will be overwritten!
 
 /** ClassFile constant pool tags. */
-export const enum ConstantType {
+export enum ConstantType {
 	/**
 	 * `CONSTANT_Utf8` tag.
 	 *

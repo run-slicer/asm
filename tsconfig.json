@@ -5,8 +5,7 @@
         "baseUrl": ".",
         "moduleResolution": "node",
         "declaration": true,
-        "outDir": "./dist",
-        "preserveConstEnums": true
+        "outDir": "./dist"
     },
     "include": ["src/**/*"]
 }

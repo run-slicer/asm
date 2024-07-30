@@ -38,7 +38,7 @@ class Generator:
             self._write_header(f)
 
             f.write("/** JVM opcodes. */\n")
-            f.write("export const enum Opcode {")
+            f.write("export enum Opcode {")
             for insn in p_input["insns"]:
                 for insn_variant in insn["values"]:
                     f.write("\n\t/**\n")
@@ -78,7 +78,7 @@ class Generator:
             self._write_header(f)
 
             f.write("/** JVM access flags. */\n")
-            f.write("export const enum Modifier {")
+            f.write("export enum Modifier {")
             for flag in sorted(p_input["access_flags"], key=(lambda i: i["value"])):
                 f.write("\n\t/**\n")
                 f.write(f"\t * `{flag['name']}` access flag, integer value `{flag['value']}`.\n")
@@ -100,7 +100,7 @@ class Generator:
             self._write_header(f)
 
             f.write("/** ClassFile versions. */\n")
-            f.write("export const enum Version {")
+            f.write("export enum Version {")
             for version in p_input["versions"]:
                 f.write("\n\t/**\n")
                 f.write(f"\t * Java {version['name']}, released in {version['release_date']}.\n")
@@ -116,7 +116,7 @@ class Generator:
             self._write_header(f)
 
             f.write("/** ClassFile attribute names. */\n")
-            f.write("export const enum AttributeType {")
+            f.write("export enum AttributeType {")
             for attr in p_input["attributes"]:
                 f.write("\n\t/**\n")
                 f.write(f"\t * `{attr['name']}` attribute.\n")
@@ -133,7 +133,7 @@ class Generator:
             self._write_header(f)
 
             f.write("/** ClassFile constant pool tags. */\n")
-            f.write("export const enum ConstantType {")
+            f.write("export enum ConstantType {")
             for tag in p_input["pool_tags"]:
                 f.write("\n\t/**\n")
                 f.write(f"\t * `{tag['name']}` tag.\n")
@@ -150,7 +150,7 @@ class Generator:
             self._write_header(f)
 
             f.write("/** Constant pool method handle kinds. */\n")
-            f.write("export const enum HandleKind {")
+            f.write("export enum HandleKind {")
             for kind in p_input["pool_handle_kinds"]:
                 f.write("\n\t/**\n")
                 f.write(f"\t * `{kind['name']}` handle kind.\n")
