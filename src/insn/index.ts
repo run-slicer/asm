@@ -295,6 +295,8 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
             case Opcode.IF_ICMPGE:
             case Opcode.IF_ICMPGT:
             case Opcode.IF_ICMPLE:
+            case Opcode.IF_ACMPEQ:
+            case Opcode.IF_ACMPNE:
             case Opcode.GOTO:
             case Opcode.GOTO_W:
             case Opcode.JSR:
@@ -348,6 +350,8 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
                 case Opcode.IF_ICMPGE:
                 case Opcode.IF_ICMPGT:
                 case Opcode.IF_ICMPLE:
+                case Opcode.IF_ACMPEQ:
+                case Opcode.IF_ACMPNE:
                 case Opcode.GOTO:
                 case Opcode.GOTO_W:
                 case Opcode.JSR:

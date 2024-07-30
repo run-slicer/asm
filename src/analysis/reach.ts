@@ -41,6 +41,8 @@ const markReachable = (code: Instruction[], offsets: Set<number>, offset: number
             case Opcode.IF_ICMPGE:
             case Opcode.IF_ICMPGT:
             case Opcode.IF_ICMPLE:
+            case Opcode.IF_ACMPEQ:
+            case Opcode.IF_ACMPNE:
             case Opcode.GOTO:
             case Opcode.GOTO_W:
             case Opcode.JSR:
@@ -72,6 +74,7 @@ const markReachable = (code: Instruction[], offsets: Set<number>, offset: number
 };
 
 export const scanReachable = (attr: CodeAttribute): number[] => {
+    // TODO: use graph
     const offsets = new Set<number>();
     markReachable(attr.insns, offsets, 0);
 

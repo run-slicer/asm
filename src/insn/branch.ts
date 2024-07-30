@@ -16,6 +16,8 @@ export interface BranchInstruction extends Instruction {
         | Opcode.IF_ICMPGE
         | Opcode.IF_ICMPGT
         | Opcode.IF_ICMPLE
+        | Opcode.IF_ACMPEQ
+        | Opcode.IF_ACMPNE
         | Opcode.GOTO
         | Opcode.GOTO_W
         | Opcode.JSR
