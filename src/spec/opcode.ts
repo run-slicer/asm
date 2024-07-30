@@ -1,4 +1,4 @@
-// This file was generated on 2024-07-26 11:35:32.029992. Do not edit, changes will be overwritten!
+// This file was generated on 2024-07-30 14:34:04.820728. Do not edit, changes will be overwritten!
 
 /** JVM opcodes. */
 export const enum Opcode {
@@ -5691,7 +5691,7 @@ export const enum Opcode {
 }
 
 /** Opcode mnemonics. */
-export const OPCODE_MNEMONICS: Record<Opcode, string> = {
+export const OPCODE_MNEMONICS: Record<number, string> = {
 	[Opcode.AALOAD]: "aaload",
 	[Opcode.AASTORE]: "aastore",
 	[Opcode.ACONST_NULL]: "aconst_null",
