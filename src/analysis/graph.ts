@@ -15,6 +15,7 @@ export interface Node {
 export interface Edge {
     source: number;
     target: number;
+    jump: boolean;
 }
 
 export interface Graph {
@@ -30,6 +31,9 @@ const getTargetOffsets = (insn: Instruction): number[] => {
 
             return [insn.offset + defaultOffset, ...jumpOffsets.map((offset) => insn.offset + offset)];
         }
+        case Opcode.GOTO:
+        case Opcode.GOTO_W:
+            return [insn.offset + (insn as BranchInstruction).branchOffset];
         case Opcode.IFEQ:
         case Opcode.IFNE:
         case Opcode.IFLT:
@@ -44,16 +48,13 @@ const getTargetOffsets = (insn: Instruction): number[] => {
         case Opcode.IF_ICMPLE:
         case Opcode.IF_ACMPEQ:
         case Opcode.IF_ACMPNE:
-        case Opcode.GOTO:
-        case Opcode.GOTO_W:
         case Opcode.JSR:
         case Opcode.JSR_W:
         case Opcode.IFNULL:
         case Opcode.IFNONNULL:
-            return [insn.offset + (insn as BranchInstruction).branchOffset];
+            return [insn.offset + insn.length /* next offset */, insn.offset + (insn as BranchInstruction).branchOffset];
     }
 
-    // execution continues on next instruction
     return [];
 };
 
@@ -78,12 +79,12 @@ export const computeGraph = (insns: Instruction[]): Graph => {
     for (let i = 0; i < insns.length; i++) {
         const insn = insns[i];
         if (insnLeaders.has(insn.offset)) {
-            const lastInsn = currentNode.insns[currentNode.insns.length - 1];
+            const lastInsn = insns[i - 1];
             if (lastInsn && !TERMINAL_OPCODES.has(lastInsn.opcode)) {
                 currentNode.leaf = false;
-                if (insnTargets[currentNode.insns.length - 1].length === 0) {
+                if (insnTargets[i - 1].length === 0) {
                     // didn't return/throw nor jump, reconnect
-                    edges.push({ source: currentNode.offset, target: insn.offset });
+                    edges.push({ source: currentNode.offset, target: insn.offset, jump: false });
                 }
             }
 
@@ -93,7 +94,7 @@ export const computeGraph = (insns: Instruction[]): Graph => {
 
         currentNode.insns.push(insn);
         for (const targetOffset of insnTargets[i]) {
-            edges.push({ source: currentNode.offset, target: targetOffset });
+            edges.push({ source: currentNode.offset, target: targetOffset, jump: true });
         }
     }
 

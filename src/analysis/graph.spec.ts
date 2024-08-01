@@ -1,15 +1,55 @@
 import { type Dirent, opendirSync, readFileSync } from "node:fs";
 import { read } from "../index";
 import { join } from "node:path";
-import { AttributeType, Opcode } from "../spec";
+import { AttributeType, Opcode, OPCODE_MNEMONICS } from "../spec";
 import type { CodeAttribute } from "../attr";
 import { computeGraph } from "./graph";
 import { expect } from "chai";
+import type { Instruction, SwitchInstruction } from "../insn";
 
 const TERMINAL_OPCODES = new Set<number>([
     Opcode.IRETURN, Opcode.LRETURN, Opcode.FRETURN, Opcode.DRETURN,
-    Opcode.ARETURN, Opcode.RETURN, Opcode.ATHROW, Opcode.RET
+    Opcode.ARETURN, Opcode.RETURN, Opcode.ATHROW, Opcode.RET,
 ]);
+
+const getExpectedEdges = (insn: Instruction): number => {
+    switch (insn.opcode) {
+        case Opcode.TABLESWITCH:
+        case Opcode.LOOKUPSWITCH: {
+            return 1 /* default offset */ + (insn as SwitchInstruction).jumpOffsets.length;
+        }
+        case Opcode.IFEQ:
+        case Opcode.IFNE:
+        case Opcode.IFLT:
+        case Opcode.IFGE:
+        case Opcode.IFGT:
+        case Opcode.IFLE:
+        case Opcode.IF_ICMPEQ:
+        case Opcode.IF_ICMPNE:
+        case Opcode.IF_ICMPLT:
+        case Opcode.IF_ICMPGE:
+        case Opcode.IF_ICMPGT:
+        case Opcode.IF_ICMPLE:
+        case Opcode.IF_ACMPEQ:
+        case Opcode.IF_ACMPNE:
+        case Opcode.JSR:
+        case Opcode.JSR_W:
+        case Opcode.IFNULL:
+        case Opcode.IFNONNULL:
+            return 2;
+        case Opcode.IRETURN:
+        case Opcode.LRETURN:
+        case Opcode.FRETURN:
+        case Opcode.DRETURN:
+        case Opcode.ARETURN:
+        case Opcode.RETURN:
+        case Opcode.ATHROW:
+        case Opcode.RET:
+            return 0;
+    }
+
+    return 1; // goto and reconnections
+};
 
 describe("graph computation", () => {
     const register = (path: string) => {
@@ -24,27 +64,29 @@ describe("graph computation", () => {
                 }
 
                 const code = attr as CodeAttribute;
-                // console.log(`method ${method.name.decode()}${method.type.decode()}`);
+                console.log(`method ${method.name.decode()}${method.type.decode()}`);
 
                 const graph = computeGraph(code.insns);
-                /*for (let i = 0; i < graph.nodes.length; i++) {
+                for (let i = 0; i < graph.nodes.length; i++){
                     const node = graph.nodes[i];
                     console.log(`${i}: ${node.insns.map((insn) => OPCODE_MNEMONICS[insn.opcode]).join(", ")}`);
-                }
-                for (let i = 0; i < graph.edges.length; i++) {
-                    const edge = graph.edges[i];
-                    console.log(`${edge.source} -> ${edge.target}`);
-                }*/
 
-                for (const node of graph.nodes) {
                     expect(node.insns.length).not.equal(0);
-                    expect(node.leaf).equal(TERMINAL_OPCODES.has(node.insns[node.insns.length - 1].opcode));
 
-                    if (node.leaf) {
-                        for (const edge of graph.edges) {
-                            expect(edge.source).not.equal(node.offset);
+                    const lastInsn = node.insns[node.insns.length - 1];
+                    expect(node.leaf).equal(TERMINAL_OPCODES.has(lastInsn.opcode));
+
+                    let edgeCount = 0;
+                    for (let j = 0; j < graph.edges.length; j++){
+                        const edge = graph.edges[j];
+                        if (edge.source === node.offset) {
+                            edgeCount++;
+                            console.log(`edge ${j}: ${JSON.stringify(edge)}`);
                         }
                     }
+
+                    expect(node.leaf).equal(edgeCount === 0);
+                    expect(edgeCount).equal(getExpectedEdges(lastInsn));
                 }
             }
         });
