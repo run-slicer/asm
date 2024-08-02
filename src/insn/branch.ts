@@ -1,9 +1,8 @@
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
-import { Instruction, InstructionKind } from "./";
+import { Instruction } from "./";
 
 export interface BranchInstruction extends Instruction {
-    kind: InstructionKind.BRANCH;
     opcode:
         | Opcode.IFEQ
         | Opcode.IFNE
@@ -34,7 +33,6 @@ export const readBranch = (insn: Instruction): BranchInstruction => {
     const wide = insn.opcode === Opcode.GOTO_W || insn.opcode === Opcode.JSR_W;
     return {
         ...insn,
-        kind: InstructionKind.BRANCH,
         wide,
         branchOffset: wide ? buffer.readInt() : buffer.readShort(),
     };

@@ -1,9 +1,8 @@
-import { Instruction, InstructionKind } from "./";
+import { Instruction } from "./";
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
 
 export interface ConstantInstruction extends Instruction {
-    kind: InstructionKind.CONSTANT;
     opcode: Opcode.LDC | Opcode.LDC_W | Opcode.LDC2_W;
     index: number;
 }
@@ -14,7 +13,6 @@ export const readLdc = (insn: Instruction): ConstantInstruction => {
     const wide = insn.operands.length > 1;
     return {
         ...insn,
-        kind: InstructionKind.CONSTANT,
         wide,
         index: wide ? buffer.readUnsignedShort() : buffer.readUnsignedByte(),
     };

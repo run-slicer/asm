@@ -144,6 +144,18 @@ class Parser:
 
         return list(results.values())
 
+    def _parse_array_codes(self, soup: BeautifulSoup) -> list:
+        results = []
+
+        # Table 6.5.newarray-A. Array type codes
+        for row in self._parse_table(soup, "jvms-6.5.newarray.desc-120"):
+            results.append({
+                "name": row[0],
+                "value": int(row[1])
+            })
+
+        return results
+
     def _parse_insns(self, soup: BeautifulSoup) -> list:
         results = []
 
@@ -209,6 +221,7 @@ class Parser:
                 "field": "jvms-4.5-200-A.1",  # Table 4.5-A. Field access and property flags
                 "method": "jvms-4.6-200-A.1"  # Table 4.6-A. Method access and property flags
             }),
+            "array_codes": self._parse_array_codes(insn_soup),
             "insns": self._parse_insns(insn_soup)
         }
 

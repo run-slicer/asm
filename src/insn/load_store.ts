@@ -1,9 +1,8 @@
-import { Instruction, InstructionKind } from "./";
+import { Instruction } from "./";
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
 
 export interface LoadStoreInstruction extends Instruction {
-    kind: InstructionKind.LOAD_STORE;
     opcode:
         | Opcode.ALOAD
         | Opcode.ASTORE
@@ -15,7 +14,11 @@ export interface LoadStoreInstruction extends Instruction {
         | Opcode.ISTORE
         | Opcode.LLOAD
         | Opcode.LSTORE
-        | Opcode.RET /* jsr return */;
+        | Opcode.RET /* jsr return */
+        | Opcode.GETFIELD
+        | Opcode.GETSTATIC
+        | Opcode.PUTFIELD
+        | Opcode.PUTSTATIC;
     index: number;
 }
 
@@ -25,7 +28,6 @@ export const readLoadStore = (insn: Instruction): LoadStoreInstruction => {
     const wide = insn.operands.length > 1;
     return {
         ...insn,
-        kind: InstructionKind.LOAD_STORE,
         wide,
         index: wide ? buffer.readUnsignedShort() : buffer.readUnsignedByte(),
     };

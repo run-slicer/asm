@@ -1,9 +1,8 @@
-import { Instruction, InstructionKind } from "./";
+import { Instruction } from "./";
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
 
 export interface IncrementInstruction extends Instruction {
-    kind: InstructionKind.INCREMENT;
     opcode: Opcode.IINC;
     index: number;
     const: number;
@@ -15,7 +14,6 @@ export const readIinc = (insn: Instruction): IncrementInstruction => {
     const wide = insn.operands.length > 2;
     return {
         ...insn,
-        kind: InstructionKind.INCREMENT,
         wide,
         index: wide ? buffer.readUnsignedShort() : buffer.readUnsignedByte(),
         const: wide ? buffer.readShort() : buffer.readByte(),

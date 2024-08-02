@@ -1036,6 +1036,40 @@
       }
     }
   ],
+  "array_codes": [
+    {
+      "name": "T_BOOLEAN",
+      "value": 4
+    },
+    {
+      "name": "T_CHAR",
+      "value": 5
+    },
+    {
+      "name": "T_FLOAT",
+      "value": 6
+    },
+    {
+      "name": "T_DOUBLE",
+      "value": 7
+    },
+    {
+      "name": "T_BYTE",
+      "value": 8
+    },
+    {
+      "name": "T_SHORT",
+      "value": 9
+    },
+    {
+      "name": "T_INT",
+      "value": 10
+    },
+    {
+      "name": "T_LONG",
+      "value": 11
+    }
+  ],
   "insns": [
     {
       "name": "aaload",

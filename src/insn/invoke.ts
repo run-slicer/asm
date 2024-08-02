@@ -1,9 +1,8 @@
-import { Instruction, InstructionKind } from "./";
+import { Instruction } from "./";
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
 
 export interface InvokeInstruction extends Instruction {
-    kind: InstructionKind.INVOKE;
     opcode:
         | Opcode.INVOKEDYNAMIC
         | Opcode.INVOKEINTERFACE
@@ -23,7 +22,6 @@ export const readInvoke = (insn: Instruction): InvokeInstruction => {
 
     const invokeInsn: Partial<InvokeInstruction> = {
         ...insn,
-        kind: InstructionKind.INVOKE,
         ref: buffer.readUnsignedShort(),
     };
 

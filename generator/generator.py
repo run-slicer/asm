@@ -21,6 +21,7 @@ class Generator:
         "./attr_type": ["AttributeType"],
         "./const_type": ["ConstantType"],
         "./handle_kind": ["HandleKind"],
+        "./array_code": ["ArrayCode"]
     }
 
     def __init__(self, output_dir: str):
@@ -161,6 +162,18 @@ class Generator:
 
             f.write("}\n")
 
+    def _generate_array_codes(self, p_input: dict):
+        with open(self._source_path("array_code.ts"), "w", encoding="utf-8") as f:
+            self._write_header(f)
+
+            f.write("/** Array type codes. */\n")
+            f.write("export enum ArrayCode {")
+            for code in p_input["array_codes"]:
+                f.write(f"\n\t/** `{code['name']}` array type code. */\n")
+                f.write(f"\t{code['name'].removeprefix('T_')} = {code['value']},\n")
+
+            f.write("}\n")
+
     def _generate_index(self):
         with open(self._source_path("index.ts"), "w", encoding="utf-8") as f:
             self._write_header(f)
@@ -176,6 +189,7 @@ class Generator:
         self._generate_attributes(p_input)
         self._generate_pool_tags(p_input)
         self._generate_pool_handle_kinds(p_input)
+        self._generate_array_codes(p_input)
         self._generate_index()
 
 

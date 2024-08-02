@@ -1,4 +1,4 @@
-import { Instruction, InstructionKind } from "./index";
+import { Instruction } from "./";
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
 import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
@@ -12,7 +12,6 @@ export interface WideInstruction extends Instruction {
 export const readWide = (insn: Instruction): WideInstruction => {
     const buffer = createBuffer(insn.operands);
     const widenedInsn: Instruction = {
-        kind: InstructionKind.UNSPECIFIC,
         opcode: buffer.readUnsignedByte(),
         operands: buffer.bufferView.subarray(1),
         offset: insn.offset + 1,
@@ -44,7 +43,6 @@ export const readWide = (insn: Instruction): WideInstruction => {
 
     return {
         ...insn,
-        kind: InstructionKind.WIDE,
         insn: wrappedInsn,
     };
 };
@@ -52,11 +50,21 @@ export const readWide = (insn: Instruction): WideInstruction => {
 export const writeWide = (wideInsn: WideInstruction): Instruction => {
     const insn = wideInsn.insn;
     if (insn.dirty) {
-        switch (insn.kind) {
-            case InstructionKind.LOAD_STORE:
+        switch (insn.opcode) {
+            case Opcode.ALOAD:
+            case Opcode.ASTORE:
+            case Opcode.DLOAD:
+            case Opcode.DSTORE:
+            case Opcode.FLOAD:
+            case Opcode.FSTORE:
+            case Opcode.ILOAD:
+            case Opcode.ISTORE:
+            case Opcode.LLOAD:
+            case Opcode.LSTORE:
+            case Opcode.RET:
                 wideInsn.insn = writeLoadStore(insn as LoadStoreInstruction);
                 break;
-            case InstructionKind.INCREMENT:
+            case Opcode.IINC:
                 wideInsn.insn = writeIinc(insn as IncrementInstruction);
                 break;
             default:

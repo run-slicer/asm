@@ -7,6 +7,9 @@ import { type IncrementInstruction, readIinc, writeIinc } from "./iinc";
 import { type WideInstruction, readWide, writeWide } from "./wide";
 import { type InvokeInstruction, readInvoke, writeInvoke } from "./invoke";
 import { type ConstantInstruction, readLdc, writeLdc } from "./ldc";
+import { type TypeInstruction, readType, writeType } from "./type";
+import { type PushInstruction, readPush, writePush } from "./push";
+import { type ArrayInstruction, readArray, writeArray } from "./array";
 
 const operandLengths: Record<number, number> = {
     [Opcode.NOP]: 0,
@@ -213,20 +216,8 @@ const operandLengths: Record<number, number> = {
     [Opcode.JSR_W]: 4,
 };
 
-export enum InstructionKind {
-    UNSPECIFIC,
-    BRANCH,
-    SWITCH,
-    INCREMENT,
-    CONSTANT,
-    LOAD_STORE,
-    WIDE,
-    INVOKE,
-}
-
 export interface Instruction extends DirtyMarkable {
-    kind: InstructionKind;
-    opcode: number;
+    opcode: number | Opcode;
     operands: Uint8Array;
     offset: number;
     length: number;
@@ -289,7 +280,6 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
 
         offset += operandLength;
         insns.push({
-            kind: InstructionKind.UNSPECIFIC,
             opcode,
             operands: data.subarray(offset - operandLength, offset),
             offset: insnOffset,
@@ -340,6 +330,10 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
             case Opcode.LLOAD:
             case Opcode.LSTORE:
             case Opcode.RET:
+            case Opcode.GETFIELD:
+            case Opcode.GETSTATIC:
+            case Opcode.PUTFIELD:
+            case Opcode.PUTSTATIC:
                 insns[i] = readLoadStore(insn);
                 break;
             case Opcode.IINC:
@@ -359,6 +353,20 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
             case Opcode.LDC_W:
             case Opcode.LDC2_W:
                 insns[i] = readLdc(insn);
+                break;
+            case Opcode.CHECKCAST:
+            case Opcode.INSTANCEOF:
+            case Opcode.NEW:
+                insns[i] = readType(insn);
+                break;
+            case Opcode.BIPUSH:
+            case Opcode.SIPUSH:
+                insns[i] = readPush(insn);
+                break;
+            case Opcode.ANEWARRAY:
+            case Opcode.NEWARRAY:
+            case Opcode.MULTIANEWARRAY:
+                insns[i] = readArray(insn);
                 break;
         }
     }
@@ -386,27 +394,81 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
 
         if (insn.dirty) {
             // rebuild data if dirty
-            switch (insn.kind) {
-                case InstructionKind.BRANCH:
+            switch (insn.opcode) {
+                case Opcode.IFEQ:
+                case Opcode.IFNE:
+                case Opcode.IFLT:
+                case Opcode.IFGE:
+                case Opcode.IFGT:
+                case Opcode.IFLE:
+                case Opcode.IF_ICMPEQ:
+                case Opcode.IF_ICMPNE:
+                case Opcode.IF_ICMPLT:
+                case Opcode.IF_ICMPGE:
+                case Opcode.IF_ICMPGT:
+                case Opcode.IF_ICMPLE:
+                case Opcode.IF_ACMPEQ:
+                case Opcode.IF_ACMPNE:
+                case Opcode.GOTO:
+                case Opcode.GOTO_W:
+                case Opcode.JSR:
+                case Opcode.JSR_W:
+                case Opcode.IFNULL:
+                case Opcode.IFNONNULL:
                     insn = insns[i] = writeBranch(insn as BranchInstruction);
                     break;
-                case InstructionKind.SWITCH:
+                case Opcode.TABLESWITCH:
+                case Opcode.LOOKUPSWITCH:
                     insn = insns[i] = writeSwitch(insn as SwitchInstruction);
                     break;
-                case InstructionKind.LOAD_STORE:
+                case Opcode.ALOAD:
+                case Opcode.ASTORE:
+                case Opcode.DLOAD:
+                case Opcode.DSTORE:
+                case Opcode.FLOAD:
+                case Opcode.FSTORE:
+                case Opcode.ILOAD:
+                case Opcode.ISTORE:
+                case Opcode.LLOAD:
+                case Opcode.LSTORE:
+                case Opcode.RET:
+                case Opcode.GETFIELD:
+                case Opcode.GETSTATIC:
+                case Opcode.PUTFIELD:
+                case Opcode.PUTSTATIC:
                     insn = insns[i] = writeLoadStore(insn as LoadStoreInstruction);
                     break;
-                case InstructionKind.INCREMENT:
+                case Opcode.IINC:
                     insn = insns[i] = writeIinc(insn as IncrementInstruction);
                     break;
-                case InstructionKind.WIDE:
+                case Opcode.WIDE:
                     insn = insns[i] = writeWide(insn as WideInstruction);
                     break;
-                case InstructionKind.INVOKE:
+                case Opcode.INVOKEDYNAMIC:
+                case Opcode.INVOKEINTERFACE:
+                case Opcode.INVOKESPECIAL:
+                case Opcode.INVOKESTATIC:
+                case Opcode.INVOKEVIRTUAL:
                     insn = insns[i] = writeInvoke(insn as InvokeInstruction);
                     break;
-                case InstructionKind.CONSTANT:
+                case Opcode.LDC:
+                case Opcode.LDC_W:
+                case Opcode.LDC2_W:
                     insn = insns[i] = writeLdc(insn as ConstantInstruction);
+                    break;
+                case Opcode.CHECKCAST:
+                case Opcode.INSTANCEOF:
+                case Opcode.NEW:
+                    insn = insns[i] = writeType(insn as TypeInstruction);
+                    break;
+                case Opcode.BIPUSH:
+                case Opcode.SIPUSH:
+                    insn = insns[i] = writePush(insn as PushInstruction);
+                    break;
+                case Opcode.ANEWARRAY:
+                case Opcode.NEWARRAY:
+                case Opcode.MULTIANEWARRAY:
+                    insn = insns[i] = writeArray(insn as ArrayInstruction);
                     break;
             }
 
@@ -428,4 +490,7 @@ export {
     WideInstruction,
     InvokeInstruction,
     ConstantInstruction,
+    TypeInstruction,
+    PushInstruction,
+    ArrayInstruction,
 };
