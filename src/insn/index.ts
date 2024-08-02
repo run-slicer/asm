@@ -5,6 +5,8 @@ import { type BranchInstruction, readBranch, writeBranch } from "./branch";
 import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
 import { type IncrementInstruction, readIinc, writeIinc } from "./iinc";
 import { type WideInstruction, readWide, writeWide } from "./wide";
+import { type InvokeInstruction, readInvoke, writeInvoke } from "./invoke";
+import { type ConstantInstruction, readLdc, writeLdc } from "./ldc";
 
 const operandLengths: Record<number, number> = {
     [Opcode.NOP]: 0,
@@ -211,7 +213,19 @@ const operandLengths: Record<number, number> = {
     [Opcode.JSR_W]: 4,
 };
 
+export enum InstructionKind {
+    UNSPECIFIC,
+    BRANCH,
+    SWITCH,
+    INCREMENT,
+    CONSTANT,
+    LOAD_STORE,
+    WIDE,
+    INVOKE,
+}
+
 export interface Instruction extends DirtyMarkable {
+    kind: InstructionKind;
     opcode: number;
     operands: Uint8Array;
     offset: number;
@@ -275,6 +289,7 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
 
         offset += operandLength;
         insns.push({
+            kind: InstructionKind.UNSPECIFIC,
             opcode,
             operands: data.subarray(offset - operandLength, offset),
             offset: insnOffset,
@@ -333,6 +348,18 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
             case Opcode.WIDE:
                 insns[i] = readWide(insn);
                 break;
+            case Opcode.INVOKEDYNAMIC:
+            case Opcode.INVOKEINTERFACE:
+            case Opcode.INVOKESPECIAL:
+            case Opcode.INVOKESTATIC:
+            case Opcode.INVOKEVIRTUAL:
+                insns[i] = readInvoke(insn);
+                break;
+            case Opcode.LDC:
+            case Opcode.LDC_W:
+            case Opcode.LDC2_W:
+                insns[i] = readLdc(insn);
+                break;
         }
     }
 
@@ -359,51 +386,27 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
 
         if (insn.dirty) {
             // rebuild data if dirty
-            switch (insn.opcode) {
-                case Opcode.IFEQ:
-                case Opcode.IFNE:
-                case Opcode.IFLT:
-                case Opcode.IFGE:
-                case Opcode.IFGT:
-                case Opcode.IFLE:
-                case Opcode.IF_ICMPEQ:
-                case Opcode.IF_ICMPNE:
-                case Opcode.IF_ICMPLT:
-                case Opcode.IF_ICMPGE:
-                case Opcode.IF_ICMPGT:
-                case Opcode.IF_ICMPLE:
-                case Opcode.IF_ACMPEQ:
-                case Opcode.IF_ACMPNE:
-                case Opcode.GOTO:
-                case Opcode.GOTO_W:
-                case Opcode.JSR:
-                case Opcode.JSR_W:
-                case Opcode.IFNULL:
-                case Opcode.IFNONNULL:
+            switch (insn.kind) {
+                case InstructionKind.BRANCH:
                     insn = insns[i] = writeBranch(insn as BranchInstruction);
                     break;
-                case Opcode.TABLESWITCH:
-                case Opcode.LOOKUPSWITCH:
+                case InstructionKind.SWITCH:
                     insn = insns[i] = writeSwitch(insn as SwitchInstruction);
                     break;
-                case Opcode.ALOAD:
-                case Opcode.ASTORE:
-                case Opcode.DLOAD:
-                case Opcode.DSTORE:
-                case Opcode.FLOAD:
-                case Opcode.FSTORE:
-                case Opcode.ILOAD:
-                case Opcode.ISTORE:
-                case Opcode.LLOAD:
-                case Opcode.LSTORE:
-                case Opcode.RET:
+                case InstructionKind.LOAD_STORE:
                     insn = insns[i] = writeLoadStore(insn as LoadStoreInstruction);
                     break;
-                case Opcode.IINC:
+                case InstructionKind.INCREMENT:
                     insn = insns[i] = writeIinc(insn as IncrementInstruction);
                     break;
-                case Opcode.WIDE:
+                case InstructionKind.WIDE:
                     insn = insns[i] = writeWide(insn as WideInstruction);
+                    break;
+                case InstructionKind.INVOKE:
+                    insn = insns[i] = writeInvoke(insn as InvokeInstruction);
+                    break;
+                case InstructionKind.CONSTANT:
+                    insn = insns[i] = writeLdc(insn as ConstantInstruction);
                     break;
             }
 
@@ -417,4 +420,12 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
     return new Uint8Array(data);
 };
 
-export { SwitchInstruction, BranchInstruction, LoadStoreInstruction, IncrementInstruction, WideInstruction };
+export {
+    SwitchInstruction,
+    BranchInstruction,
+    LoadStoreInstruction,
+    IncrementInstruction,
+    WideInstruction,
+    InvokeInstruction,
+    ConstantInstruction,
+};

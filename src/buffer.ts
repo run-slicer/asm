@@ -22,6 +22,7 @@ export interface MutableByteBuffer extends ByteBuffer {
     ensureCapacity(needed: number): void;
 
     write(buf: Uint8Array): void;
+    writeZero(n: number): void;
     writeByte(v: number): void;
     writeUnsignedByte(v: number): void;
     writeShort(v: number): void;
@@ -90,7 +91,7 @@ export const createBuffer = (buf: Uint8Array): ByteBuffer => {
 
 export const createMutableBuffer = (initialSize: number = DEFAULT_BUFFER_SIZE): MutableByteBuffer => {
     return {
-        ...createBuffer(new Uint8Array(initialSize)),
+        ...createBuffer(new Uint8Array(new ArrayBuffer(initialSize), 0, 0)),
 
         ensureCapacity(needed: number): void {
             if (needed <= 0) {
@@ -117,6 +118,12 @@ export const createMutableBuffer = (initialSize: number = DEFAULT_BUFFER_SIZE): 
             this.ensureCapacity(buf.length);
             this.bufferView.set(buf, this.offset);
             this.offset += buf.length;
+        },
+
+        writeZero(n: number) {
+            this.ensureCapacity(n);
+            // buffer is zeroed by default, just extend
+            this.offset += n;
         },
 
         writeByte(v: number): void {

@@ -1,4 +1,4 @@
-import type { Instruction } from "./index";
+import { Instruction, InstructionKind } from "./index";
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
 import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
@@ -12,6 +12,7 @@ export interface WideInstruction extends Instruction {
 export const readWide = (insn: Instruction): WideInstruction => {
     const buffer = createBuffer(insn.operands);
     const widenedInsn: Instruction = {
+        kind: InstructionKind.UNSPECIFIC,
         opcode: buffer.readUnsignedByte(),
         operands: buffer.bufferView.subarray(1),
         offset: insn.offset + 1,
@@ -41,27 +42,21 @@ export const readWide = (insn: Instruction): WideInstruction => {
             throw new Error(`Unrecognized wide opcode ${widenedInsn.opcode}`);
     }
 
-    return { ...insn, insn: wrappedInsn };
+    return {
+        ...insn,
+        kind: InstructionKind.WIDE,
+        insn: wrappedInsn,
+    };
 };
 
 export const writeWide = (wideInsn: WideInstruction): Instruction => {
     const insn = wideInsn.insn;
     if (insn.dirty) {
-        switch (insn.opcode) {
-            case Opcode.ALOAD:
-            case Opcode.ASTORE:
-            case Opcode.DLOAD:
-            case Opcode.DSTORE:
-            case Opcode.FLOAD:
-            case Opcode.FSTORE:
-            case Opcode.ILOAD:
-            case Opcode.ISTORE:
-            case Opcode.LLOAD:
-            case Opcode.LSTORE:
-            case Opcode.RET:
+        switch (insn.kind) {
+            case InstructionKind.LOAD_STORE:
                 wideInsn.insn = writeLoadStore(insn as LoadStoreInstruction);
                 break;
-            case Opcode.IINC:
+            case InstructionKind.INCREMENT:
                 wideInsn.insn = writeIinc(insn as IncrementInstruction);
                 break;
             default:

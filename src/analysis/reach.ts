@@ -1,5 +1,5 @@
 import type { CodeAttribute } from "../attr";
-import type { BranchInstruction, Instruction, SwitchInstruction } from "../insn";
+import { BranchInstruction, Instruction, InstructionKind, SwitchInstruction } from "../insn";
 import { Opcode } from "../spec";
 
 const reachableInRange = (offsets: Set<number>, start: number, end: number): boolean => {
@@ -114,6 +114,7 @@ export const removeUnreachable = (attr: CodeAttribute): CodeAttribute => {
                 }
 
                 insns.push({
+                    kind: InstructionKind.UNSPECIFIC,
                     opcode,
                     operands: new Uint8Array(0),
                     offset: insn.offset + j,

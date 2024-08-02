@@ -2,8 +2,14 @@ import type { BranchInstruction, Instruction, SwitchInstruction } from "../insn"
 import { Opcode } from "../spec";
 
 const TERMINAL_OPCODES = new Set<number>([
-    Opcode.IRETURN, Opcode.LRETURN, Opcode.FRETURN, Opcode.DRETURN,
-    Opcode.ARETURN, Opcode.RETURN, Opcode.ATHROW, Opcode.RET
+    Opcode.IRETURN,
+    Opcode.LRETURN,
+    Opcode.FRETURN,
+    Opcode.DRETURN,
+    Opcode.ARETURN,
+    Opcode.RETURN,
+    Opcode.ATHROW,
+    Opcode.RET,
 ]);
 
 export interface Node {
@@ -52,7 +58,10 @@ const getTargetOffsets = (insn: Instruction): number[] => {
         case Opcode.JSR_W:
         case Opcode.IFNULL:
         case Opcode.IFNONNULL:
-            return [insn.offset + insn.length /* next offset */, insn.offset + (insn as BranchInstruction).branchOffset];
+            return [
+                insn.offset + insn.length /* next offset */,
+                insn.offset + (insn as BranchInstruction).branchOffset,
+            ];
     }
 
     return [];
@@ -63,17 +72,15 @@ export const computeGraph = (insns: Instruction[]): Graph => {
     const edges: Edge[] = [];
 
     const insnTargets = insns.map(getTargetOffsets);
-    const insnLeaders = new Set<number>(
-        [
-            0,
-            ...insnTargets.flatMap((t, i) => {
-                const insn = insns[i];
+    const insnLeaders = new Set<number>([
+        0,
+        ...insnTargets.flatMap((t, i) => {
+            const insn = insns[i];
 
-                // if we're jumping, the next instruction will always be in a new logical block
-                return t.length > 0 ? [insn.offset + insn.length /* next offset */, ...t] : [];
-            })
-        ]
-    );
+            // if we're jumping, the next instruction will always be in a new logical block
+            return t.length > 0 ? [insn.offset + insn.length /* next offset */, ...t] : [];
+        }),
+    ]);
 
     let currentNode: Node = { offset: -1, insns: [], leaf: true };
     for (let i = 0; i < insns.length; i++) {

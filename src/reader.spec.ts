@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { expect } from "chai";
 import type { UTF8Entry } from "./pool";
 import { read, write } from "./";
-import type { Attributable } from "./attr";
+import type { Attributable, CodeAttribute } from "./attr";
+import { AttributeType } from "./spec";
 
 describe("reader", () => {
     it("read samples/zkm/sample/string/StringsLong.class", async () => {
@@ -24,6 +25,12 @@ describe("reader", () => {
 const markDirty = (attrib: Attributable) => {
     for (const attr of attrib.attrs) {
         attr.dirty = true;
+        if (attr.name === AttributeType.CODE) {
+            const code = attr as CodeAttribute;
+            for (const insn of code.insns) {
+                insn.dirty = true;
+            }
+        }
     }
 };
 

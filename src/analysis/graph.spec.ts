@@ -8,8 +8,14 @@ import { expect } from "chai";
 import type { Instruction, SwitchInstruction } from "../insn";
 
 const TERMINAL_OPCODES = new Set<number>([
-    Opcode.IRETURN, Opcode.LRETURN, Opcode.FRETURN, Opcode.DRETURN,
-    Opcode.ARETURN, Opcode.RETURN, Opcode.ATHROW, Opcode.RET,
+    Opcode.IRETURN,
+    Opcode.LRETURN,
+    Opcode.FRETURN,
+    Opcode.DRETURN,
+    Opcode.ARETURN,
+    Opcode.RETURN,
+    Opcode.ATHROW,
+    Opcode.RET,
 ]);
 
 const getExpectedEdges = (insn: Instruction): number => {
@@ -67,7 +73,7 @@ describe("graph computation", () => {
                 console.log(`method ${method.name.decode()}${method.type.decode()}`);
 
                 const graph = computeGraph(code.insns);
-                for (let i = 0; i < graph.nodes.length; i++){
+                for (let i = 0; i < graph.nodes.length; i++) {
                     const node = graph.nodes[i];
                     console.log(`${i}: ${node.insns.map((insn) => OPCODE_MNEMONICS[insn.opcode]).join(", ")}`);
 
@@ -77,7 +83,7 @@ describe("graph computation", () => {
                     expect(node.leaf).equal(TERMINAL_OPCODES.has(lastInsn.opcode));
 
                     let edgeCount = 0;
-                    for (let j = 0; j < graph.edges.length; j++){
+                    for (let j = 0; j < graph.edges.length; j++) {
                         const edge = graph.edges[j];
                         if (edge.source === node.offset) {
                             edgeCount++;

@@ -1,10 +1,11 @@
 import { Opcode } from "../spec";
 import { createBuffer, createMutableBuffer } from "../buffer";
-import type { Instruction } from "./";
+import { Instruction, InstructionKind } from "./";
 
 const TYPICAL_SWITCH_SIZE = 16;
 
 export interface SwitchInstruction extends Instruction {
+    kind: InstructionKind.SWITCH;
     opcode: Opcode.TABLESWITCH | Opcode.LOOKUPSWITCH;
     defaultOffset: number;
     jumpOffsets: number[];
@@ -26,6 +27,7 @@ export const readSwitch = (insn: Instruction): SwitchInstruction => {
 
     const switchInsn: Partial<SwitchInstruction> = {
         ...insn,
+        kind: InstructionKind.SWITCH,
         defaultOffset: buffer.readInt(),
     };
 
@@ -62,6 +64,7 @@ export const readSwitch = (insn: Instruction): SwitchInstruction => {
 export const writeSwitch = (insn: SwitchInstruction, initialSize: number = TYPICAL_SWITCH_SIZE): Instruction => {
     const buffer = createMutableBuffer(initialSize);
 
+    buffer.writeInt(insn.defaultOffset);
     if (insn.opcode === Opcode.TABLESWITCH) {
         const tableSwInsn = insn as TableSwitchInstruction;
 
