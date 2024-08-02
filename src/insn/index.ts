@@ -1,7 +1,10 @@
 import { Opcode } from "../spec";
+import type { DirtyMarkable } from "../";
 import { type SwitchInstruction, readSwitch, writeSwitch } from "./switch";
 import { type BranchInstruction, readBranch, writeBranch } from "./branch";
-import type { DirtyMarkable } from "../";
+import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
+import { type IncrementInstruction, readIinc, writeIinc } from "./iinc";
+import { type WideInstruction, readWide, writeWide } from "./wide";
 
 const operandLengths: Record<number, number> = {
     [Opcode.NOP]: 0,
@@ -213,11 +216,13 @@ export interface Instruction extends DirtyMarkable {
     operands: Uint8Array;
     offset: number;
     length: number;
+    wide?: boolean;
 }
 
 export const readInsns = (data: Uint8Array): Instruction[] => {
     const insns: Instruction[] = [];
 
+    // first pass: read bytes
     let offset = 0;
     while (offset < data.length) {
         const insnOffset = offset;
@@ -278,7 +283,7 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
         });
     }
 
-    // second pass: read operands
+    // second pass: interpret bytes
     for (let i = 0; i < insns.length; i++) {
         const insn = insns[i];
 
@@ -302,15 +307,32 @@ export const readInsns = (data: Uint8Array): Instruction[] => {
             case Opcode.JSR:
             case Opcode.JSR_W:
             case Opcode.IFNULL:
-            case Opcode.IFNONNULL: {
+            case Opcode.IFNONNULL:
                 insns[i] = readBranch(insn);
                 break;
-            }
             case Opcode.TABLESWITCH:
-            case Opcode.LOOKUPSWITCH: {
+            case Opcode.LOOKUPSWITCH:
                 insns[i] = readSwitch(insn);
                 break;
-            }
+            case Opcode.ALOAD:
+            case Opcode.ASTORE:
+            case Opcode.DLOAD:
+            case Opcode.DSTORE:
+            case Opcode.FLOAD:
+            case Opcode.FSTORE:
+            case Opcode.ILOAD:
+            case Opcode.ISTORE:
+            case Opcode.LLOAD:
+            case Opcode.LSTORE:
+            case Opcode.RET:
+                insns[i] = readLoadStore(insn);
+                break;
+            case Opcode.IINC:
+                insns[i] = readIinc(insn);
+                break;
+            case Opcode.WIDE:
+                insns[i] = readWide(insn);
+                break;
         }
     }
 
@@ -357,15 +379,32 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
                 case Opcode.JSR:
                 case Opcode.JSR_W:
                 case Opcode.IFNULL:
-                case Opcode.IFNONNULL: {
+                case Opcode.IFNONNULL:
                     insn = insns[i] = writeBranch(insn as BranchInstruction);
                     break;
-                }
                 case Opcode.TABLESWITCH:
-                case Opcode.LOOKUPSWITCH: {
+                case Opcode.LOOKUPSWITCH:
                     insn = insns[i] = writeSwitch(insn as SwitchInstruction);
                     break;
-                }
+                case Opcode.ALOAD:
+                case Opcode.ASTORE:
+                case Opcode.DLOAD:
+                case Opcode.DSTORE:
+                case Opcode.FLOAD:
+                case Opcode.FSTORE:
+                case Opcode.ILOAD:
+                case Opcode.ISTORE:
+                case Opcode.LLOAD:
+                case Opcode.LSTORE:
+                case Opcode.RET:
+                    insn = insns[i] = writeLoadStore(insn as LoadStoreInstruction);
+                    break;
+                case Opcode.IINC:
+                    insn = insns[i] = writeIinc(insn as IncrementInstruction);
+                    break;
+                case Opcode.WIDE:
+                    insn = insns[i] = writeWide(insn as WideInstruction);
+                    break;
             }
 
             insn.dirty = false;
@@ -378,4 +417,4 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
     return new Uint8Array(data);
 };
 
-export { SwitchInstruction, BranchInstruction };
+export { SwitchInstruction, BranchInstruction, LoadStoreInstruction, IncrementInstruction, WideInstruction };

@@ -33,15 +33,14 @@ export const readBranch = (insn: Instruction): BranchInstruction => {
     const wide = insn.opcode === Opcode.GOTO_W || insn.opcode === Opcode.JSR_W;
     return {
         ...insn,
+        wide,
         branchOffset: wide ? buffer.readInt() : buffer.readShort(),
     };
 };
 
 export const writeBranch = (insn: BranchInstruction): Instruction => {
-    const wide = insn.opcode === Opcode.GOTO_W || insn.opcode === Opcode.JSR_W;
-
-    const buffer = createMutableBuffer(wide ? 4 : 2);
-    if (wide) {
+    const buffer = createMutableBuffer(insn.wide ? 4 : 2);
+    if (insn.wide) {
         buffer.writeInt(insn.branchOffset);
     } else {
         buffer.writeShort(insn.branchOffset);
