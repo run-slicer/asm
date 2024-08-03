@@ -1,4 +1,4 @@
-import { ConstantType, type HandleKind } from "./spec";
+import { ConstantType, HandleKind } from "./spec";
 import type { ByteBuffer, MutableByteBuffer } from "./buffer";
 
 export interface Entry {
@@ -222,5 +222,55 @@ export const writePool = (buffer: MutableByteBuffer, pool: Pool) => {
         if (entry.type === ConstantType.DOUBLE || entry.type === ConstantType.LONG) {
             i++; // longs and doubles take two pool entries
         }
+    }
+};
+
+export const formatEntry = (entry: Entry, pool: Pool): string => {
+    switch (entry.type) {
+        case ConstantType.UTF8:
+            return (entry as UTF8Entry).decode();
+        case ConstantType.INTEGER:
+        case ConstantType.FLOAT:
+            return (entry as NumericEntry).value.toString();
+        case ConstantType.LONG:
+        case ConstantType.DOUBLE:
+            const data = (entry as WideNumericEntry).data;
+            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+
+            const func = entry.type === ConstantType.LONG ? view.getBigInt64 : view.getFloat64;
+            return func(0, false).toString();
+        case ConstantType.CLASS:
+            return formatEntry(pool[(entry as ClassEntry).name]!, pool);
+        case ConstantType.STRING:
+            return `"${formatEntry(pool[(entry as StringEntry).data]!, pool)}"`;
+        case ConstantType.METHOD_TYPE:
+            return formatEntry(pool[(entry as MethodTypeEntry).descriptor]!, pool);
+        case ConstantType.MODULE:
+        case ConstantType.PACKAGE:
+            return formatEntry(pool[(entry as ModularEntry).name]!, pool);
+        case ConstantType.FIELDREF:
+        case ConstantType.METHODREF:
+        case ConstantType.INTERFACE_METHODREF: {
+            const refEntry = entry as RefEntry;
+
+            return `${formatEntry(pool[refEntry.ref]!, pool)} ${formatEntry(pool[refEntry.nameType]!, pool)}`;
+        }
+        case ConstantType.NAME_AND_TYPE: {
+            const ntEntry = entry as NameTypeEntry;
+
+            return `${(pool[ntEntry.name] as UTF8Entry).decode()} ${(pool[ntEntry.type_] as UTF8Entry).decode()}`;
+        }
+        case ConstantType.DYNAMIC:
+        case ConstantType.INVOKE_DYNAMIC: {
+            const dynEntry = entry as DynamicEntry;
+
+            return `${dynEntry.bsmIndex} ${formatEntry(pool[dynEntry.nameType]!, pool)}`;
+        }
+        case ConstantType.METHOD_HANDLE:
+            const handleEntry = entry as HandleEntry;
+
+            return `${HandleKind[handleEntry.kind].toLowerCase()} ${formatEntry(pool[handleEntry.ref]!, pool)}`;
+        default:
+            throw new Error("Unrecognized constant pool tag " + entry.type);
     }
 };

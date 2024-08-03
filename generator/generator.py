@@ -15,7 +15,7 @@ def to_upper_snake(s: str) -> str:
 
 class Generator:
     MEMBERS = {
-        "./opcode": ["Opcode", "OPCODE_MNEMONICS"],
+        "./opcode": ["Opcode"],
         "./modifier": ["Modifier"],
         "./version": ["Version"],
         "./attr_type": ["AttributeType"],
@@ -65,14 +65,6 @@ class Generator:
                     f.write(f"\t{insn_variant['name'].upper()} = {hex(insn_variant['value'])},\n")
 
             f.write("}\n")
-
-            f.write("\n/** Opcode mnemonics. */\n")
-            f.write("export const OPCODE_MNEMONICS: Record<number, string> = {\n")
-            for insn in p_input["insns"]:
-                for insn_variant in insn["values"]:
-                    f.write(f"\t[Opcode.{insn_variant['name'].upper()}]: \"{insn_variant['name']}\",\n")
-
-            f.write("};\n")
 
     def _generate_access_flags(self, p_input: dict):
         with open(self._source_path("modifier.ts"), "w", encoding="utf-8") as f:

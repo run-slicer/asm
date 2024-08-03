@@ -1,7 +1,7 @@
 import { type Dirent, opendirSync, readFileSync } from "node:fs";
 import { read } from "../index";
 import { join } from "node:path";
-import { AttributeType, Opcode, OPCODE_MNEMONICS } from "../spec";
+import { AttributeType, Opcode } from "../spec";
 import type { CodeAttribute } from "../attr";
 import { computeGraph } from "./graph";
 import { expect } from "chai";
@@ -75,7 +75,7 @@ describe("graph computation", () => {
                 const graph = computeGraph(code.insns);
                 for (let i = 0; i < graph.nodes.length; i++) {
                     const node = graph.nodes[i];
-                    console.log(`${i}: ${node.insns.map((insn) => OPCODE_MNEMONICS[insn.opcode]).join(", ")}`);
+                    console.log(`${i}: ${node.insns.map((insn) => Opcode[insn.opcode]).join(", ")}`);
 
                     expect(node.insns.length).not.equal(0);
 
