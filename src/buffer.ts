@@ -15,7 +15,9 @@ export interface ByteBuffer {
     readUnsignedShort(): number;
     readInt(): number;
     readUnsignedInt(): number;
+    readLong(): bigint;
     readFloat(): number;
+    readDouble(): number;
 }
 
 export interface MutableByteBuffer extends ByteBuffer {
@@ -29,7 +31,9 @@ export interface MutableByteBuffer extends ByteBuffer {
     writeUnsignedShort(v: number): void;
     writeInt(v: number): void;
     writeUnsignedInt(v: number): void;
+    writeLong(v: bigint): void;
     writeFloat(v: number): void;
+    writeDouble(v: number): void;
 }
 
 export const createBuffer = (buf: Uint8Array): ByteBuffer => {
@@ -81,9 +85,21 @@ export const createBuffer = (buf: Uint8Array): ByteBuffer => {
             return value;
         },
 
+        readLong(): bigint {
+            const value = this.view.getBigInt64(this.bufferView.byteOffset + this.offset, false);
+            this.offset += 8;
+            return value;
+        },
+
         readFloat(): number {
             const value = this.view.getFloat32(this.bufferView.byteOffset + this.offset, false);
             this.offset += 4;
+            return value;
+        },
+
+        readDouble(): number {
+            const value = this.view.getFloat64(this.bufferView.byteOffset + this.offset, false);
+            this.offset += 8;
             return value;
         },
     };
@@ -162,10 +178,22 @@ export const createMutableBuffer = (initialSize: number = DEFAULT_BUFFER_SIZE): 
             this.offset += 4;
         },
 
+        writeLong(v: bigint): void {
+            this.ensureCapacity(8);
+            this.view.setBigInt64(this.bufferView.byteOffset + this.offset, v, false);
+            this.offset += 8;
+        },
+
         writeFloat(v: number): void {
             this.ensureCapacity(4);
             this.view.setFloat32(this.bufferView.byteOffset + this.offset, v, false);
             this.offset += 4;
+        },
+
+        writeDouble(v: number): void {
+            this.ensureCapacity(8);
+            this.view.setFloat64(this.bufferView.byteOffset + this.offset, v, false);
+            this.offset += 8;
         },
     };
 };

@@ -61,11 +61,13 @@ const getTargetOffsets = (insn: Instruction): TargetOffset[] => {
         }
         case Opcode.GOTO:
         case Opcode.GOTO_W:
-            return [{
-                offset: insn.offset + (insn as BranchInstruction).branchOffset,
-                type: EdgeType.UNSPECIFIC,
-                jump: true,
-            }];
+            return [
+                {
+                    offset: insn.offset + (insn as BranchInstruction).branchOffset,
+                    type: EdgeType.UNSPECIFIC,
+                    jump: true,
+                },
+            ];
         case Opcode.IFEQ:
         case Opcode.IFNE:
         case Opcode.IFLT:

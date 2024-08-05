@@ -6,14 +6,17 @@ export interface Entry {
     index: number;
 }
 
-export interface NumericEntry extends Entry {
-    type: ConstantType.INTEGER | ConstantType.FLOAT;
-    value: number;
+export interface NumericEntry<T> extends Entry {
+    type: ConstantType.INTEGER | ConstantType.LONG | ConstantType.FLOAT | ConstantType.DOUBLE;
+    value: T;
 }
 
-export interface WideNumericEntry extends Entry {
-    type: ConstantType.LONG | ConstantType.DOUBLE;
-    data: Uint8Array;
+export interface NumberEntry extends NumericEntry<number> {
+    type: ConstantType.INTEGER | ConstantType.FLOAT | ConstantType.DOUBLE;
+}
+
+export interface LongEntry extends NumericEntry<bigint> {
+    type: ConstantType.LONG;
 }
 
 export interface ClassEntry extends Entry {
@@ -85,12 +88,13 @@ const readSingle = (buffer: ByteBuffer, index: number): Entry => {
                 },
             } as UTF8Entry;
         case ConstantType.INTEGER:
-            return { type, index, value: buffer.readInt() } as NumericEntry;
+            return { type, index, value: buffer.readInt() } as NumberEntry;
         case ConstantType.FLOAT:
-            return { type, index, value: buffer.readFloat() } as NumericEntry;
+            return { type, index, value: buffer.readFloat() } as NumberEntry;
         case ConstantType.LONG:
+            return { type, index, value: buffer.readLong() } as LongEntry;
         case ConstantType.DOUBLE:
-            return { type, index, data: buffer.read(8) } as WideNumericEntry;
+            return { type, index, value: buffer.readDouble() } as NumberEntry;
         case ConstantType.CLASS:
             return { type, index, name: buffer.readUnsignedShort() } as ClassEntry;
         case ConstantType.STRING:
@@ -159,14 +163,16 @@ const writeSingle = (buffer: MutableByteBuffer, entry: Entry) => {
             buffer.write(utf8Entry.data);
             break;
         case ConstantType.INTEGER:
-            buffer.writeInt((entry as NumericEntry).value);
+            buffer.writeInt((entry as NumberEntry).value);
             break;
         case ConstantType.FLOAT:
-            buffer.writeFloat((entry as NumericEntry).value);
+            buffer.writeFloat((entry as NumberEntry).value);
             break;
         case ConstantType.LONG:
+            buffer.writeLong((entry as LongEntry).value);
+            break;
         case ConstantType.DOUBLE:
-            buffer.write((entry as WideNumericEntry).data);
+            buffer.writeDouble((entry as NumberEntry).value);
             break;
         case ConstantType.CLASS:
             buffer.writeUnsignedShort((entry as ClassEntry).name);
@@ -231,13 +237,9 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
             return (entry as UTF8Entry).decode();
         case ConstantType.INTEGER:
         case ConstantType.FLOAT:
-            return (entry as NumericEntry).value.toString();
         case ConstantType.LONG:
         case ConstantType.DOUBLE:
-            const data = (entry as WideNumericEntry).data;
-
-            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-            return (entry.type === ConstantType.LONG ? view.getBigInt64(0, false) : view.getFloat64(0, false)).toString();
+            return (entry as NumericEntry<any>).value.toString();
         case ConstantType.CLASS:
             return formatEntry(pool[(entry as ClassEntry).name]!, pool);
         case ConstantType.STRING:
