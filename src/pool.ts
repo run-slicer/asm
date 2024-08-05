@@ -235,10 +235,9 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
         case ConstantType.LONG:
         case ConstantType.DOUBLE:
             const data = (entry as WideNumericEntry).data;
-            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
-            const func = entry.type === ConstantType.LONG ? view.getBigInt64 : view.getFloat64;
-            return func(0, false).toString();
+            const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+            return (entry.type === ConstantType.LONG ? view.getBigInt64(0, false) : view.getFloat64(0, false)).toString();
         case ConstantType.CLASS:
             return formatEntry(pool[(entry as ClassEntry).name]!, pool);
         case ConstantType.STRING:
