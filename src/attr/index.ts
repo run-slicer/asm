@@ -5,9 +5,12 @@ import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } fro
 import type { DirtyMarkable } from "../";
 
 export interface Attribute extends DirtyMarkable {
-    name: string; // built-ins => AttributeType
-    nameEntry: UTF8Entry;
+    nameIndex: number;
     data: Uint8Array;
+
+    // not present if index is invalid
+    name?: string; // arbitrary name or built-ins from AttributeType
+    nameEntry?: UTF8Entry;
 }
 
 export interface Attributable {
@@ -15,13 +18,16 @@ export interface Attributable {
 }
 
 const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
-    const nameEntry = pool[buffer.readUnsignedShort()] as UTF8Entry;
+    const nameIndex = buffer.readUnsignedShort();
+    const nameEntry = pool[nameIndex] as UTF8Entry | undefined;
+
     const data = buffer.read(buffer.readInt());
 
     let attr: Attribute = {
-        name: nameEntry.decode(),
         dirty: false,
+        nameIndex,
         data,
+        name: nameEntry?.decode(),
         nameEntry,
     };
     switch (attr.name) {
@@ -46,21 +52,25 @@ export const readAttrs = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
 };
 
 const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
-    buffer.writeUnsignedShort(attr.nameEntry.index);
-    buffer.writeInt(attr.data.length);
-
     if (attr.dirty) {
         // rebuild data if dirty
-        attr.name = attr.nameEntry.decode();
-        switch (attr.name) {
-            case AttributeType.CODE: {
-                attr.data = writeCode(attr as CodeAttribute);
-                break;
+        if (attr.nameEntry) {
+            attr.nameIndex = attr.nameEntry.index;
+            attr.name = attr.nameEntry.decode();
+
+            switch (attr.name) {
+                case AttributeType.CODE: {
+                    attr.data = writeCode(attr as CodeAttribute);
+                    break;
+                }
             }
         }
 
         attr.dirty = false;
     }
+
+    buffer.writeUnsignedShort(attr.nameIndex);
+    buffer.writeInt(attr.data.length);
     buffer.write(attr.data);
 };
 
