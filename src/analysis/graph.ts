@@ -26,11 +26,14 @@ export enum EdgeType {
     SWITCH_BRANCH,
 }
 
-export interface Edge {
+export interface UndirectedEdge {
     type: EdgeType;
-    source: number;
     target: number;
     jump: boolean;
+}
+
+export interface Edge extends UndirectedEdge {
+    source: number;
 }
 
 export interface Graph {
@@ -38,22 +41,16 @@ export interface Graph {
     edges: Edge[];
 }
 
-interface TargetOffset {
-    offset: number;
-    type: EdgeType;
-    jump: boolean;
-}
-
-const getTargetOffsets = (insn: Instruction): TargetOffset[] => {
+const getTargetEdges = (insn: Instruction): UndirectedEdge[] => {
     switch (insn.opcode) {
         case Opcode.TABLESWITCH:
         case Opcode.LOOKUPSWITCH: {
             const { defaultOffset, jumpOffsets } = insn as SwitchInstruction;
 
             return [
-                { offset: insn.offset + defaultOffset, type: EdgeType.SWITCH_DEFAULT, jump: true },
+                { target: insn.offset + defaultOffset, type: EdgeType.SWITCH_DEFAULT, jump: true },
                 ...jumpOffsets.map((offset) => ({
-                    offset: insn.offset + offset,
+                    target: insn.offset + offset,
                     type: EdgeType.SWITCH_BRANCH,
                     jump: true,
                 })),
@@ -63,7 +60,7 @@ const getTargetOffsets = (insn: Instruction): TargetOffset[] => {
         case Opcode.GOTO_W:
             return [
                 {
-                    offset: insn.offset + (insn as BranchInstruction).branchOffset,
+                    target: insn.offset + (insn as BranchInstruction).branchOffset,
                     type: EdgeType.UNSPECIFIC,
                     jump: true,
                 },
@@ -88,12 +85,12 @@ const getTargetOffsets = (insn: Instruction): TargetOffset[] => {
         case Opcode.IFNONNULL:
             return [
                 {
-                    offset: insn.offset + insn.length /* next offset */,
+                    target: insn.offset + insn.length /* next offset */,
                     type: EdgeType.CONDITION_FALSE,
                     jump: false,
                 },
                 {
-                    offset: insn.offset + (insn as BranchInstruction).branchOffset,
+                    target: insn.offset + (insn as BranchInstruction).branchOffset,
                     type: EdgeType.CONDITION_TRUE,
                     jump: true,
                 },
@@ -107,14 +104,14 @@ export const computeGraph = (insns: Instruction[]): Graph => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    const insnTargets = insns.map(getTargetOffsets);
+    const insnTargets = insns.map(getTargetEdges);
     const insnLeaders = new Set<number>([
         0,
         ...insnTargets.flatMap((t, i) => {
             const insn = insns[i];
 
             // if we're jumping, the next instruction will always be in a new logical block
-            return t.length > 0 ? [insn.offset + insn.length /* next offset */, ...t.map((o) => o.offset)] : [];
+            return t.length > 0 ? [insn.offset + insn.length /* next offset */, ...t.map((e) => e.target)] : [];
         }),
     ]);
 
@@ -141,13 +138,8 @@ export const computeGraph = (insns: Instruction[]): Graph => {
         }
 
         currentNode.insns.push(insn);
-        for (const { type, offset, jump } of insnTargets[i]) {
-            edges.push({
-                type,
-                source: currentNode.offset,
-                target: offset,
-                jump,
-            });
+        for (const target of insnTargets[i]) {
+            edges.push({ ...target, source: currentNode.offset });
         }
     }
 
