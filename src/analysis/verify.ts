@@ -11,7 +11,7 @@ const enum AttributeContext {
     ATTRIBUTE = 1 << 4,
 }
 
-const getAttrContext = (attr: Attribute): AttributeContext => {
+const getContext = (attr: Attribute): AttributeContext => {
     if (!attr.name) {
         return AttributeContext.NONE;
     }
@@ -50,12 +50,17 @@ const getAttrContext = (attr: Attribute): AttributeContext => {
     }
 
     // all are allowed by default
-    return AttributeContext.CLASS | AttributeContext.FIELD | AttributeContext.METHOD
-        | AttributeContext.RECORD_COMPONENT | AttributeContext.ATTRIBUTE;
+    return (
+        AttributeContext.CLASS |
+        AttributeContext.FIELD |
+        AttributeContext.METHOD |
+        AttributeContext.RECORD_COMPONENT |
+        AttributeContext.ATTRIBUTE
+    );
 };
 
 const checkSingle = (attr: Attribute, ctx: AttributeContext): boolean => {
-    if ((getAttrContext(attr) & ctx) !== 0) {
+    if ((getContext(attr) & ctx) !== 0) {
         // attribute not allowed in context
         return false;
     }
@@ -76,7 +81,7 @@ const check = (attrib: Attributable, ctx: AttributeContext) => {
 
 const filter = (attrib: Attributable, name: string) => {
     attrib.attrs = attrib.attrs.filter((a) => a.name !== name);
-}
+};
 
 export const removeIllegal = (node: Node) => {
     check(node, AttributeContext.CLASS);
