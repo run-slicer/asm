@@ -1,6 +1,6 @@
 import { AttributeType, Modifier } from "../spec";
 import type { Attributable, Attribute } from "../attr";
-import type { Node } from "../";
+import type { DirtyMarkable, Node } from "../";
 
 const enum AttributeContext {
     NONE = 0,
@@ -11,7 +11,7 @@ const enum AttributeContext {
     ATTRIBUTE = 1 << 4,
 }
 
-const getContext = (attr: Attribute): AttributeContext => {
+const getAllowedContext = (attr: Attribute): AttributeContext => {
     if (!attr.name) {
         return AttributeContext.NONE;
     }
@@ -60,7 +60,7 @@ const getContext = (attr: Attribute): AttributeContext => {
 };
 
 const checkSingle = (attr: Attribute, ctx: AttributeContext): boolean => {
-    if ((getContext(attr) & ctx) !== 0) {
+    if ((getAllowedContext(attr) & ctx) === 0) {
         // attribute not allowed in context
         return false;
     }
@@ -68,31 +68,50 @@ const checkSingle = (attr: Attribute, ctx: AttributeContext): boolean => {
     return true;
 };
 
-const check = (attrib: Attributable, ctx: AttributeContext) => {
-    attrib.attrs = attrib.attrs.filter((a) => checkSingle(a, ctx));
+const check = (attrib: Attributable, ctx: AttributeContext): boolean => {
+    let dirty = false;
+
+    const valid = attrib.attrs.filter((a) => checkSingle(a, ctx));
+    if (attrib.attrs.length > valid.length) {
+        dirty = true; // one or more attributes were removed, dirty
+    }
+
+    attrib.attrs = valid;
 
     // check nested attributes
     for (const attr of attrib.attrs) {
-        if ("attrs" in attr) {
-            check(attr as Attributable, AttributeContext.ATTRIBUTE);
+        if ("attrs" in attr && check(attr as Attributable, AttributeContext.ATTRIBUTE)) {
+            dirty = true; // a nested attribute is dirty, propagate
         }
     }
+
+    if (dirty && "dirty" in attrib) {
+        // mark ourselves as dirty
+        (attrib as DirtyMarkable).dirty = true;
+    }
+    return dirty;
 };
 
-const filter = (attrib: Attributable, name: string) => {
-    attrib.attrs = attrib.attrs.filter((a) => a.name !== name);
+const filter = (attrib: Attributable, name: string): boolean => {
+    const valid = attrib.attrs.filter((a) => a.name !== name);
+    const dirty = attrib.attrs.length > valid.length;
+
+    attrib.attrs = valid;
+    return dirty;
 };
 
-export const removeIllegal = (node: Node) => {
+export const removeIllegal = (node: Node): Node => {
     check(node, AttributeContext.CLASS);
     for (const field of node.fields) {
         check(field, AttributeContext.FIELD);
     }
     for (const method of node.methods) {
         check(method, AttributeContext.METHOD);
-        if ((method.access & Modifier.ABSTRACT) !== 0) {
+        if ((method.access & Modifier.ABSTRACT) > 0) {
             // Code attributes are not allowed on abstract methods
             filter(method, AttributeType.CODE);
         }
     }
+
+    return node; // in-place
 };
