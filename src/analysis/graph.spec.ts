@@ -72,7 +72,7 @@ describe("graph computation", () => {
                 const code = attr as CodeAttribute;
                 console.log(`method ${method.name.decode()}${method.type.decode()}`);
 
-                const graph = computeGraph(code.insns);
+                const graph = computeGraph(code);
                 for (let i = 0; i < graph.nodes.length; i++) {
                     const node = graph.nodes[i];
                     console.log(`${i}: ${node.insns.map((insn) => Opcode[insn.opcode]).join(", ")}`);

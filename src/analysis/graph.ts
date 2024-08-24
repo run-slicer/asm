@@ -1,5 +1,6 @@
 import type { BranchInstruction, Instruction, SwitchInstruction } from "../insn";
 import { Opcode } from "../spec";
+import type { CodeAttribute } from "../attr";
 
 const TERMINAL_OPCODES = new Set<number>([
     Opcode.IRETURN,
@@ -100,15 +101,16 @@ const getTargetEdges = (insn: Instruction): UndirectedEdge[] => {
     return [];
 };
 
-export const computeGraph = (insns: Instruction[]): Graph => {
+export const computeGraph = (code: CodeAttribute): Graph => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    const insnTargets = insns.map(getTargetEdges);
+    const insnTargets = code.insns.map(getTargetEdges);
     const insnLeaders = new Set<number>([
         0,
+        ...code.exceptionTable.flatMap((e) => [e.startPC, e.endPC, e.handlerPC]),
         ...insnTargets.flatMap((t, i) => {
-            const insn = insns[i];
+            const insn = code.insns[i];
 
             // if we're jumping, the next instruction will always be in a new logical block
             return t.length > 0 ? [insn.offset + insn.length /* next offset */, ...t.map((e) => e.target)] : [];
@@ -116,10 +118,10 @@ export const computeGraph = (insns: Instruction[]): Graph => {
     ]);
 
     let currentNode: Node = { offset: -1, insns: [], leaf: true };
-    for (let i = 0; i < insns.length; i++) {
-        const insn = insns[i];
+    for (let i = 0; i < code.insns.length; i++) {
+        const insn = code.insns[i];
         if (insnLeaders.has(insn.offset)) {
-            const lastInsn = insns[i - 1];
+            const lastInsn = code.insns[i - 1];
             if (lastInsn && !TERMINAL_OPCODES.has(lastInsn.opcode)) {
                 currentNode.leaf = false;
                 if (insnTargets[i - 1].length === 0) {

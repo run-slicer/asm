@@ -100,7 +100,7 @@ const filter = (attrib: Attributable, name: string): boolean => {
     return dirty;
 };
 
-export const removeIllegal = (node: Node): Node => {
+export const verify = (node: Node): Node => {
     check(node, AttributeContext.CLASS);
     for (const field of node.fields) {
         check(field, AttributeContext.FIELD);
