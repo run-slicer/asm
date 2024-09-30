@@ -1,5 +1,5 @@
 import { Opcode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 import { Instruction } from "./";
 
 const TYPICAL_SWITCH_SIZE = 16;
@@ -22,35 +22,35 @@ export interface LookupSwitchInstruction extends SwitchInstruction {
 }
 
 export const readSwitch = (insn: Instruction): SwitchInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
 
     const switchInsn: Partial<SwitchInstruction> = {
         ...insn,
-        defaultOffset: buffer.readInt(),
+        defaultOffset: buffer.getInt32(),
     };
 
     if (insn.opcode === Opcode.TABLESWITCH) {
         const tableSwInsn = switchInsn as TableSwitchInstruction;
 
-        tableSwInsn.lowCase = buffer.readInt();
-        tableSwInsn.highCase = buffer.readInt();
+        tableSwInsn.lowCase = buffer.getInt32();
+        tableSwInsn.highCase = buffer.getInt32();
 
         const jumpOffsetCount = tableSwInsn.highCase - tableSwInsn.lowCase + 1;
         switchInsn.jumpOffsets = new Array<number>(jumpOffsetCount);
 
         for (let i = 0; i < jumpOffsetCount; i++) {
-            switchInsn.jumpOffsets[i] = buffer.readInt();
+            switchInsn.jumpOffsets[i] = buffer.getInt32();
         }
     } else if (insn.opcode === Opcode.LOOKUPSWITCH) {
         const lookupSwInsn = switchInsn as LookupSwitchInstruction;
 
-        const jumpOffsetCount = buffer.readInt();
+        const jumpOffsetCount = buffer.getInt32();
         lookupSwInsn.cases = new Array<number>(jumpOffsetCount);
         lookupSwInsn.jumpOffsets = new Array<number>(jumpOffsetCount);
 
         for (let i = 0; i < jumpOffsetCount; i++) {
-            lookupSwInsn.cases[i] = buffer.readInt();
-            lookupSwInsn.jumpOffsets[i] = buffer.readInt();
+            lookupSwInsn.cases[i] = buffer.getInt32();
+            lookupSwInsn.jumpOffsets[i] = buffer.getInt32();
         }
     } else {
         throw new Error(`Unrecognized switch opcode ${insn.opcode}`);
@@ -60,30 +60,30 @@ export const readSwitch = (insn: Instruction): SwitchInstruction => {
 };
 
 export const writeSwitch = (insn: SwitchInstruction, initialSize: number = TYPICAL_SWITCH_SIZE): Instruction => {
-    const buffer = createMutableBuffer(initialSize);
+    const buffer = create(initialSize);
 
-    buffer.writeInt(insn.defaultOffset);
+    buffer.setInt32(insn.defaultOffset);
     if (insn.opcode === Opcode.TABLESWITCH) {
         const tableSwInsn = insn as TableSwitchInstruction;
 
-        buffer.writeInt(tableSwInsn.lowCase);
-        buffer.writeInt(tableSwInsn.highCase);
+        buffer.setInt32(tableSwInsn.lowCase);
+        buffer.setInt32(tableSwInsn.highCase);
 
         for (const jumpOffset of tableSwInsn.jumpOffsets) {
-            buffer.writeInt(jumpOffset);
+            buffer.setInt32(jumpOffset);
         }
     } else if (insn.opcode === Opcode.LOOKUPSWITCH) {
         const lookupSwInsn = insn as LookupSwitchInstruction;
 
-        buffer.writeInt(lookupSwInsn.jumpOffsets.length);
+        buffer.setInt32(lookupSwInsn.jumpOffsets.length);
 
         for (let i = 0; i < lookupSwInsn.jumpOffsets.length; i++) {
-            buffer.writeInt(lookupSwInsn.cases[i]);
-            buffer.writeInt(lookupSwInsn.jumpOffsets[i]);
+            buffer.setInt32(lookupSwInsn.cases[i]);
+            buffer.setInt32(lookupSwInsn.jumpOffsets[i]);
         }
     } else {
         throw new Error(`Unrecognized switch opcode ${insn.opcode}`);
     }
 
-    return { ...insn, operands: buffer.bufferView };
+    return { ...insn, operands: buffer.arrayView };
 };

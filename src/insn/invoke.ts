@@ -1,6 +1,6 @@
 import { Instruction } from "./";
 import { Opcode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 
 export interface InvokeInstruction extends Instruction {
     opcode:
@@ -18,17 +18,17 @@ export interface InvokeInterfaceInstruction extends InvokeInstruction {
 }
 
 export const readInvoke = (insn: Instruction): InvokeInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
 
     const invokeInsn: Partial<InvokeInstruction> = {
         ...insn,
-        ref: buffer.readUnsignedShort(),
+        ref: buffer.getUint16(),
     };
 
     if (insn.opcode === Opcode.INVOKEINTERFACE) {
         const iifInsn = invokeInsn as InvokeInterfaceInstruction;
 
-        iifInsn.count = buffer.readUnsignedByte();
+        iifInsn.count = buffer.getUint8();
     }
 
     return invokeInsn as InvokeInstruction;
@@ -37,20 +37,20 @@ export const readInvoke = (insn: Instruction): InvokeInstruction => {
 export const writeInvoke = (insn: InvokeInstruction): Instruction => {
     const hasPadding = insn.opcode === Opcode.INVOKEDYNAMIC || insn.opcode === Opcode.INVOKEINTERFACE;
 
-    const buffer = createMutableBuffer(hasPadding ? 4 : 2);
-    buffer.writeUnsignedShort(insn.ref);
+    const buffer = create(hasPadding ? 4 : 2);
+    buffer.setUint16(insn.ref);
 
     if (hasPadding) {
         let neededZeroes = 2;
         if (insn.opcode === Opcode.INVOKEINTERFACE) {
             const iifInsn = insn as InvokeInterfaceInstruction;
 
-            buffer.writeUnsignedByte(iifInsn.count);
+            buffer.setUint8(iifInsn.count);
             neededZeroes--;
         }
 
-        buffer.writeZero(neededZeroes);
+        buffer.set(new Uint8Array(neededZeroes) /* zeroed array */);
     }
 
-    return { ...insn, operands: buffer.bufferView };
+    return { ...insn, operands: buffer.arrayView };
 };

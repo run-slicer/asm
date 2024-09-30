@@ -1,6 +1,6 @@
 import type { Instruction } from "./";
 import { Opcode, ArrayCode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 
 export interface ArrayInstruction extends Instruction {
     opcode: Opcode.ANEWARRAY | Opcode.NEWARRAY | Opcode.MULTIANEWARRAY;
@@ -9,25 +9,25 @@ export interface ArrayInstruction extends Instruction {
 }
 
 export const readArray = (insn: Instruction): ArrayInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
 
     return {
         ...insn,
-        type: insn.opcode === Opcode.NEWARRAY ? buffer.readUnsignedByte() : buffer.readUnsignedShort(),
-        dimensions: insn.opcode === Opcode.MULTIANEWARRAY ? buffer.readUnsignedByte() : 1,
+        type: insn.opcode === Opcode.NEWARRAY ? buffer.getUint8() : buffer.getUint16(),
+        dimensions: insn.opcode === Opcode.MULTIANEWARRAY ? buffer.getUint8() : 1,
     };
 };
 
 export const writeArray = (insn: ArrayInstruction): Instruction => {
-    const buffer = createMutableBuffer(3); // max size
+    const buffer = create(3); // max size
     if (insn.opcode === Opcode.NEWARRAY) {
-        buffer.writeUnsignedByte(insn.type);
+        buffer.setUint8(insn.type);
     } else {
-        buffer.writeUnsignedShort(insn.type);
+        buffer.setUint16(insn.type);
     }
     if (insn.opcode === Opcode.MULTIANEWARRAY) {
-        buffer.writeUnsignedByte(insn.dimensions);
+        buffer.setUint8(insn.dimensions);
     }
 
-    return { ...insn, operands: buffer.bufferView };
+    return { ...insn, operands: buffer.arrayView };
 };

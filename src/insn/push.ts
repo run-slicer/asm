@@ -1,6 +1,6 @@
 import { Instruction } from "./";
 import { Opcode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 
 export interface PushInstruction extends Instruction {
     opcode: Opcode.BIPUSH | Opcode.SIPUSH;
@@ -8,23 +8,23 @@ export interface PushInstruction extends Instruction {
 }
 
 export const readPush = (insn: Instruction): PushInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
 
     return {
         ...insn,
-        value: insn.opcode === Opcode.SIPUSH ? buffer.readUnsignedShort() : buffer.readUnsignedByte(),
+        value: insn.opcode === Opcode.SIPUSH ? buffer.getUint16() : buffer.getUint8(),
     };
 };
 
 export const writePush = (insn: PushInstruction): Instruction => {
     const short = insn.opcode === Opcode.SIPUSH;
 
-    const buffer = createMutableBuffer(short ? 2 : 1);
+    const buffer = create(short ? 2 : 1);
     if (short) {
-        buffer.writeUnsignedShort(insn.value);
+        buffer.setUint16(insn.value);
     } else {
-        buffer.writeUnsignedByte(insn.value);
+        buffer.setUint8(insn.value);
     }
 
-    return { ...insn, operands: buffer.bufferView };
+    return { ...insn, operands: buffer.arrayView };
 };

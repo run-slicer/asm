@@ -1,6 +1,6 @@
 import { Opcode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
 import { Instruction } from "./";
+import { create, wrap } from "../buffer";
 
 export interface BranchInstruction extends Instruction {
     opcode:
@@ -28,23 +28,23 @@ export interface BranchInstruction extends Instruction {
 }
 
 export const readBranch = (insn: Instruction): BranchInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
 
     const wide = insn.opcode === Opcode.GOTO_W || insn.opcode === Opcode.JSR_W;
     return {
         ...insn,
         wide,
-        branchOffset: wide ? buffer.readInt() : buffer.readShort(),
+        branchOffset: wide ? buffer.getInt32() : buffer.getInt16(),
     };
 };
 
 export const writeBranch = (insn: BranchInstruction): Instruction => {
-    const buffer = createMutableBuffer(insn.wide ? 4 : 2);
+    const buffer = create(insn.wide ? 4 : 2);
     if (insn.wide) {
-        buffer.writeInt(insn.branchOffset);
+        buffer.setInt32(insn.branchOffset);
     } else {
-        buffer.writeShort(insn.branchOffset);
+        buffer.setInt16(insn.branchOffset);
     }
 
-    return { ...insn, operands: buffer.bufferView };
+    return { ...insn, operands: buffer.arrayView };
 };

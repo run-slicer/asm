@@ -1,6 +1,6 @@
 import { Instruction } from "./";
 import { Opcode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
 import { type IncrementInstruction, readIinc, writeIinc } from "./iinc";
 
@@ -10,10 +10,10 @@ export interface WideInstruction extends Instruction {
 }
 
 export const readWide = (insn: Instruction): WideInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
     const widenedInsn: Instruction = {
-        opcode: buffer.readUnsignedByte(),
-        operands: buffer.bufferView.subarray(1),
+        opcode: buffer.getUint8(),
+        operands: buffer.arrayView.subarray(1),
         offset: insn.offset + 1,
         length: insn.length - 1,
         dirty: false,
@@ -74,9 +74,9 @@ export const writeWide = (wideInsn: WideInstruction): Instruction => {
         insn.dirty = false;
     }
 
-    const buffer = createMutableBuffer(1 + insn.operands.length);
-    buffer.writeUnsignedByte(insn.opcode);
-    buffer.write(insn.operands);
+    const buffer = create(1 + insn.operands.length);
+    buffer.setUint8(insn.opcode);
+    buffer.set(insn.operands);
 
-    return { ...wideInsn, operands: buffer.bufferView };
+    return { ...wideInsn, operands: buffer.arrayView };
 };

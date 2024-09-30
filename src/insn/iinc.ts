@@ -1,6 +1,6 @@
 import { Instruction } from "./";
 import { Opcode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 
 export interface IncrementInstruction extends Instruction {
     opcode: Opcode.IINC;
@@ -9,26 +9,26 @@ export interface IncrementInstruction extends Instruction {
 }
 
 export const readIinc = (insn: Instruction): IncrementInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
 
     const wide = insn.operands.length > 2;
     return {
         ...insn,
         wide,
-        index: wide ? buffer.readUnsignedShort() : buffer.readUnsignedByte(),
-        const: wide ? buffer.readShort() : buffer.readByte(),
+        index: wide ? buffer.getUint16() : buffer.getUint8(),
+        const: wide ? buffer.getInt16() : buffer.getInt8(),
     };
 };
 
 export const writeIinc = (insn: IncrementInstruction): Instruction => {
-    const buffer = createMutableBuffer(insn.wide ? 4 : 2);
+    const buffer = create(insn.wide ? 4 : 2);
     if (insn.wide) {
-        buffer.writeUnsignedShort(insn.index);
-        buffer.writeShort(insn.const);
+        buffer.setUint16(insn.index);
+        buffer.setInt16(insn.const);
     } else {
-        buffer.writeUnsignedByte(insn.index);
-        buffer.writeByte(insn.const);
+        buffer.setUint8(insn.index);
+        buffer.setInt8(insn.const);
     }
 
-    return { ...insn, operands: buffer.bufferView };
+    return { ...insn, operands: buffer.arrayView };
 };

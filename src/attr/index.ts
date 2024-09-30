@@ -1,5 +1,5 @@
 import type { Pool, UTF8Entry } from "../pool";
-import { type ByteBuffer, type MutableByteBuffer } from "../buffer";
+import type { Buffer } from "../buffer";
 import { AttributeType } from "../spec";
 import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
 import type { DirtyMarkable } from "../";
@@ -17,11 +17,11 @@ export interface Attributable {
     attrs: Attribute[];
 }
 
-const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
-    const nameIndex = buffer.readUnsignedShort();
+const readSingle = (buffer: Buffer, pool: Pool): Attribute => {
+    const nameIndex = buffer.getUint16();
     const nameEntry = pool[nameIndex] as UTF8Entry | undefined;
 
-    const data = buffer.read(buffer.readInt());
+    const data = buffer.get(buffer.getInt32());
 
     let attr: Attribute = {
         dirty: false,
@@ -40,8 +40,8 @@ const readSingle = (buffer: ByteBuffer, pool: Pool): Attribute => {
     return attr;
 };
 
-export const readAttrs = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
-    const attributesCount = buffer.readUnsignedShort();
+export const readAttrs = (buffer: Buffer, pool: Pool): Attribute[] => {
+    const attributesCount = buffer.getUint16();
 
     const attributes = new Array<Attribute>(attributesCount);
     for (let i = 0; i < attributesCount; i++) {
@@ -51,7 +51,7 @@ export const readAttrs = (buffer: ByteBuffer, pool: Pool): Attribute[] => {
     return attributes;
 };
 
-const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
+const writeSingle = (buffer: Buffer, attr: Attribute) => {
     if (attr.dirty) {
         // rebuild data if dirty
         if (attr.nameEntry) {
@@ -69,13 +69,13 @@ const writeSingle = (buffer: MutableByteBuffer, attr: Attribute) => {
         attr.dirty = false;
     }
 
-    buffer.writeUnsignedShort(attr.nameIndex);
-    buffer.writeInt(attr.data.length);
-    buffer.write(attr.data);
+    buffer.setUint16(attr.nameIndex);
+    buffer.setInt32(attr.data.length);
+    buffer.set(attr.data);
 };
 
-export const writeAttrs = (buffer: MutableByteBuffer, attrs: Attribute[]) => {
-    buffer.writeUnsignedShort(attrs.length);
+export const writeAttrs = (buffer: Buffer, attrs: Attribute[]) => {
+    buffer.setUint16(attrs.length);
     for (const attr of attrs) {
         writeSingle(buffer, attr);
     }

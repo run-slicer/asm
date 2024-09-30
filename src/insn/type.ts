@@ -1,6 +1,6 @@
 import { type Instruction } from "./";
 import { Opcode } from "../spec";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 
 export interface TypeInstruction extends Instruction {
     opcode: Opcode.CHECKCAST | Opcode.INSTANCEOF | Opcode.NEW;
@@ -8,17 +8,17 @@ export interface TypeInstruction extends Instruction {
 }
 
 export const readType = (insn: Instruction): TypeInstruction => {
-    const buffer = createBuffer(insn.operands);
+    const buffer = wrap(insn.operands);
 
     return {
         ...insn,
-        index: buffer.readUnsignedShort(),
+        index: buffer.getUint16(),
     };
 };
 
 export const writeType = (insn: TypeInstruction): Instruction => {
-    const buffer = createMutableBuffer(2);
-    buffer.writeUnsignedShort(insn.index);
+    const buffer = create(2);
+    buffer.setUint16(insn.index);
 
-    return { ...insn, operands: buffer.bufferView };
+    return { ...insn, operands: buffer.arrayView };
 };

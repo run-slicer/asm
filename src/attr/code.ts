@@ -1,6 +1,6 @@
 import { type Instruction, readInsns, writeInsns } from "../insn";
 import type { Pool } from "../pool";
-import { createBuffer, createMutableBuffer } from "../buffer";
+import { create, wrap } from "../buffer";
 import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./";
 
 const TYPICAL_CODE_LENGTH = 8096 /* instructions */ + 16; /* exception table */
@@ -20,26 +20,26 @@ export interface CodeAttribute extends Attribute, Attributable {
 }
 
 export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
-    const buffer = createBuffer(attr.data);
+    const buffer = wrap(attr.data);
 
     const codeAttr: Partial<CodeAttribute> = {
         ...attr,
-        maxStack: buffer.readUnsignedShort(),
-        maxLocals: buffer.readUnsignedShort(),
+        maxStack: buffer.getUint16(),
+        maxLocals: buffer.getUint16(),
     };
 
-    const codeLength = buffer.readUnsignedInt();
-    codeAttr.insns = readInsns(buffer.read(codeLength));
+    const codeLength = buffer.getUint32();
+    codeAttr.insns = readInsns(buffer.get(codeLength));
 
-    const excTableLength = buffer.readUnsignedShort();
+    const excTableLength = buffer.getUint16();
 
     codeAttr.exceptionTable = new Array<ExceptionTableEntry>(excTableLength);
     for (let i = 0; i < excTableLength; i++) {
         codeAttr.exceptionTable[i] = {
-            startPC: buffer.readUnsignedShort(),
-            endPC: buffer.readUnsignedShort(),
-            handlerPC: buffer.readUnsignedShort(),
-            catchType: buffer.readUnsignedShort(),
+            startPC: buffer.getUint16(),
+            endPC: buffer.getUint16(),
+            handlerPC: buffer.getUint16(),
+            catchType: buffer.getUint16(),
         };
     }
 
@@ -49,24 +49,24 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
 };
 
 export const writeCode = (attr: CodeAttribute, initialSize: number = TYPICAL_CODE_LENGTH): Uint8Array => {
-    const buffer = createMutableBuffer(initialSize);
+    const buffer = create(initialSize);
 
-    buffer.writeUnsignedShort(attr.maxStack);
-    buffer.writeUnsignedShort(attr.maxLocals);
+    buffer.setUint16(attr.maxStack);
+    buffer.setUint16(attr.maxLocals);
 
     const code = writeInsns(attr.insns);
-    buffer.writeUnsignedInt(code.length);
-    buffer.write(code);
+    buffer.setUint32(code.length);
+    buffer.set(code);
 
-    buffer.writeUnsignedShort(attr.exceptionTable.length);
+    buffer.setUint16(attr.exceptionTable.length);
     for (const entry of attr.exceptionTable) {
-        buffer.writeUnsignedShort(entry.startPC);
-        buffer.writeUnsignedShort(entry.endPC);
-        buffer.writeUnsignedShort(entry.handlerPC);
-        buffer.writeUnsignedShort(entry.catchType);
+        buffer.setUint16(entry.startPC);
+        buffer.setUint16(entry.endPC);
+        buffer.setUint16(entry.handlerPC);
+        buffer.setUint16(entry.catchType);
     }
 
     writeAttrs(buffer, attr.attrs);
 
-    return buffer.bufferView;
+    return buffer.arrayView;
 };
