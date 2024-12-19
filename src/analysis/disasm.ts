@@ -1,7 +1,7 @@
 import { AttributeType, Modifier } from "../spec";
 import type { Node, Member } from "../";
-import { CodeAttribute } from "../attr";
-import { Pool, UTF8Entry } from "../pool";
+import type { CodeAttribute } from "../attr";
+import type { Pool, UTF8Entry } from "../pool";
 import { formatInsn } from "../insn";
 
 const enum NodeType {
