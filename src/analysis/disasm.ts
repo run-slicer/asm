@@ -179,11 +179,6 @@ const splitDescs = (descs: string): string[] => {
     return args;
 };
 
-export interface DisassemblyResult {
-    code: string;
-    references: string[]; // referenced classes, empty if fullyQualified is true
-}
-
 const block = (s: string, indent: string): string => s.replaceAll(/^(?!\s*$)/gm, indent);
 
 const disassembleCode = (code: CodeAttribute, pool: Pool): string => {
@@ -258,14 +253,19 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder): s
     return result;
 };
 
+export interface DisassemblyResult {
+    code: string;
+    references: string[]; // referenced classes, empty if fullyQualified is true
+}
+
 export interface DisassemblyOptions {
     indent: string; // the indentation string, defaults to 4 spaces
-    fullyQualified: boolean; // whether class references should be fully qualified, defaults to false
+    fullyQualified: boolean; // whether class references should be fully qualified, defaults to true
 }
 
 const defaultOptions: DisassemblyOptions = {
     indent: "    ",
-    fullyQualified: false,
+    fullyQualified: true,
 };
 
 export const disassembleMethod = (
