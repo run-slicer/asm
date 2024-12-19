@@ -5,10 +5,12 @@ import { disassemble } from "./disasm";
 describe("disassembly", () => {
     const register = (path: string) => {
         it(`disassemble ${path}`, () => {
-            const { code /*, references*/ } = disassemble(read(new Uint8Array(readFileSync(path)))/*, {
+            const { code /*, references*/ } = disassemble(
+                read(new Uint8Array(readFileSync(path))) /*, {
                 indent: "    ",
                 fullyQualified: true,
-            }*/);
+            }*/
+            );
             console.log(code);
             // console.log(`[${references.join(", ")}]`);
         });

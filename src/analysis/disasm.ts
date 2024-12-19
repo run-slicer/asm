@@ -1,6 +1,6 @@
 import { AttributeType, Modifier } from "../spec";
 import type { Node, Member } from "../";
-import type { CodeAttribute } from "../attr";
+import type { CodeAttribute, SourceFileAttribute } from "../attr";
 import type { Pool, UTF8Entry } from "../pool";
 import { formatInsn } from "../insn";
 
@@ -223,7 +223,14 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder): s
         nodeType = NodeType.ENUM;
     }
 
-    let result = formatMod(
+    let result = "";
+
+    const sourceFile = node.attrs.find((a) => a.name === AttributeType.SOURCE_FILE);
+    if (sourceFile) {
+        result += `// Source file: ${(sourceFile as SourceFileAttribute).sourceFileEntry?.decode()}\n`;
+    }
+
+    result += formatMod(
         node.access,
         nodeType === NodeType.CLASS || nodeType === NodeType.ENUM ? ElementType.CLASS : ElementType.INTERFACE
     );
