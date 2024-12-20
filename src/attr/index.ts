@@ -3,6 +3,8 @@ import type { Buffer } from "../buffer";
 import { AttributeType } from "../spec";
 import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
 import type { DirtyMarkable } from "../";
+import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./source_file";
+import { type SignatureAttribute, readSignature, writeSignature } from "./signature";
 
 export interface Attribute extends DirtyMarkable {
     nameIndex: number;
@@ -35,6 +37,14 @@ const readSingle = (buffer: Buffer, pool: Pool): Attribute => {
             attr = readCode(attr, pool);
             break;
         }
+        case AttributeType.SOURCE_FILE: {
+            attr = readSourceFile(attr, pool);
+            break;
+        }
+        case AttributeType.SIGNATURE: {
+            attr = readSignature(attr, pool);
+            break;
+        }
     }
 
     return attr;
@@ -63,6 +73,14 @@ const writeSingle = (buffer: Buffer, attr: Attribute) => {
                     attr.data = writeCode(attr as CodeAttribute);
                     break;
                 }
+                case AttributeType.SOURCE_FILE: {
+                    attr.data = writeSourceFile(attr as SourceFileAttribute);
+                    break;
+                }
+                case AttributeType.SIGNATURE: {
+                    attr.data = writeSignature(attr as SignatureAttribute);
+                    break;
+                }
             }
         }
 
@@ -81,4 +99,4 @@ export const writeAttrs = (buffer: Buffer, attrs: Attribute[]) => {
     }
 };
 
-export { CodeAttribute, ExceptionTableEntry };
+export { CodeAttribute, SourceFileAttribute, SignatureAttribute, ExceptionTableEntry };
