@@ -1,5 +1,4 @@
-import { ArrayCode, Opcode } from "../spec";
-import { type Pool, formatEntry } from "../pool";
+import { Opcode } from "../spec";
 import type { DirtyMarkable } from "../";
 import { type SwitchInstruction, readSwitch, writeSwitch } from "./switch";
 import { type BranchInstruction, readBranch, writeBranch } from "./branch";
@@ -481,75 +480,6 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
     }
 
     return new Uint8Array(data);
-};
-
-export const formatInsn = (insn: Instruction, pool: Pool): string => {
-    let value = Opcode[insn.opcode]?.toLowerCase() || "<unknown opcode>";
-    switch (insn.opcode) {
-        case Opcode.ALOAD:
-        case Opcode.ASTORE:
-        case Opcode.DLOAD:
-        case Opcode.DSTORE:
-        case Opcode.FLOAD:
-        case Opcode.FSTORE:
-        case Opcode.ILOAD:
-        case Opcode.ISTORE:
-        case Opcode.LLOAD:
-        case Opcode.LSTORE:
-        case Opcode.RET:
-            value += ` ${(insn as LoadStoreInstruction).index}`;
-            break;
-        case Opcode.GETFIELD:
-        case Opcode.GETSTATIC:
-        case Opcode.PUTFIELD:
-        case Opcode.PUTSTATIC:
-            value += ` ${formatEntry(pool[(insn as LoadStoreInstruction).index]!, pool)}`;
-            break;
-        case Opcode.IINC: {
-            const iincInsn = insn as IncrementInstruction;
-
-            value += ` ${iincInsn.index} ${iincInsn.const}`;
-            break;
-        }
-        case Opcode.WIDE:
-            value += ` ${formatInsn((insn as WideInstruction).insn, pool)}`;
-            break;
-        case Opcode.INVOKEDYNAMIC:
-        case Opcode.INVOKEINTERFACE:
-        case Opcode.INVOKESPECIAL:
-        case Opcode.INVOKESTATIC:
-        case Opcode.INVOKEVIRTUAL:
-            value += ` ${formatEntry(pool[(insn as InvokeInstruction).ref]!, pool)}`;
-            break;
-        case Opcode.LDC:
-        case Opcode.LDC_W:
-        case Opcode.LDC2_W:
-            value += ` ${formatEntry(pool[(insn as ConstantInstruction).index]!, pool)}`;
-            break;
-        case Opcode.CHECKCAST:
-        case Opcode.INSTANCEOF:
-        case Opcode.NEW:
-            value += ` ${formatEntry(pool[(insn as TypeInstruction).index]!, pool)}`;
-            break;
-        case Opcode.BIPUSH:
-        case Opcode.SIPUSH:
-            value += ` ${(insn as PushInstruction).value}`;
-            break;
-        case Opcode.ANEWARRAY:
-        case Opcode.NEWARRAY:
-        case Opcode.MULTIANEWARRAY: {
-            const arrayInsn = insn as ArrayInstruction;
-            const arrayCode = ArrayCode[arrayInsn.type];
-
-            value += ` ${arrayCode ? arrayCode.substring(2).toLowerCase() : formatEntry(pool[arrayInsn.type]!, pool)}`;
-            if (arrayInsn.opcode === Opcode.MULTIANEWARRAY) {
-                value += ` ${arrayInsn.dimensions}`;
-            }
-            break;
-        }
-    }
-
-    return value;
 };
 
 export {
