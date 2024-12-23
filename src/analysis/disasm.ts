@@ -27,14 +27,14 @@ import type {
     WideInstruction,
 } from "../insn";
 
-const enum NodeType {
+export enum NodeType {
     CLASS = "class",
     ENUM = "enum",
     INTERFACE = "interface",
     ANNOTATION = "@interface",
 }
 
-const enum ElementType {
+export enum ElementType {
     CLASS,
     INTERFACE,
     CONSTRUCTOR,
@@ -76,7 +76,7 @@ const modMasks: Record<ElementType, number> = {
     [ElementType.PARAMETER]: Modifier.FINAL,
 };
 
-const formatMod = (mod: number, element?: ElementType): string => {
+export const formatMod = (mod: number, element?: ElementType): string => {
     mod = mod & (element ? modMasks[element] || 0 : 0);
 
     let result = "";
@@ -147,12 +147,12 @@ for (const [value, key] of baseEscapes) {
     literalEscapes.set(key, value);
 }
 
-const escapeString = (s: string): string =>
+export const escapeString = (s: string): string =>
     Array.from(s)
         .map((char) => baseEscapes.get(char) ?? char)
         .join("");
 
-const escapeLiteral = (s: string): string =>
+export const escapeLiteral = (s: string): string =>
     Array.from(s)
         .map((char) => literalEscapes.get(char) ?? char)
         .join("");
