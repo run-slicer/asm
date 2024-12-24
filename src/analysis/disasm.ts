@@ -173,6 +173,7 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
         case ConstantType.METHOD_TYPE:
             return formatEntry(pool[(entry as MethodTypeEntry).descriptor]!, pool);
         case ConstantType.MODULE:
+            return escapeString(formatEntry(pool[(entry as ModularEntry).name]!, pool));
         case ConstantType.PACKAGE:
             return escapeLiteral(formatEntry(pool[(entry as ModularEntry).name]!, pool));
         case ConstantType.FIELDREF:
