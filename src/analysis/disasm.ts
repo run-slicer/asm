@@ -32,6 +32,7 @@ export enum NodeType {
     ENUM = "enum",
     INTERFACE = "interface",
     ANNOTATION = "@interface",
+    MODULE = "module",
 }
 
 export enum ElementType {
@@ -51,10 +52,25 @@ const modMasks: Record<ElementType, number> = {
         Modifier.ABSTRACT |
         Modifier.STATIC |
         Modifier.FINAL |
-        Modifier.STRICT,
+        Modifier.STRICT |
+        Modifier.SUPER |
+        Modifier.SYNTHETIC,
     [ElementType.INTERFACE]:
-        Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE | Modifier.ABSTRACT | Modifier.STATIC | Modifier.STRICT,
-    [ElementType.CONSTRUCTOR]: Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE,
+        Modifier.PUBLIC |
+        Modifier.PROTECTED |
+        Modifier.PRIVATE |
+        Modifier.ABSTRACT |
+        Modifier.STATIC |
+        Modifier.STRICT |
+        Modifier.SUPER |
+        Modifier.SYNTHETIC,
+    [ElementType.CONSTRUCTOR]:
+        Modifier.PUBLIC |
+        Modifier.PROTECTED |
+        Modifier.PRIVATE |
+        Modifier.BRIDGE |
+        Modifier.VARARGS |
+        Modifier.SYNTHETIC,
     [ElementType.METHOD]:
         Modifier.PUBLIC |
         Modifier.PROTECTED |
@@ -64,7 +80,10 @@ const modMasks: Record<ElementType, number> = {
         Modifier.FINAL |
         Modifier.SYNCHRONIZED |
         Modifier.NATIVE |
-        Modifier.STRICT,
+        Modifier.STRICT |
+        Modifier.BRIDGE |
+        Modifier.VARARGS |
+        Modifier.SYNTHETIC,
     [ElementType.FIELD]:
         Modifier.PUBLIC |
         Modifier.PROTECTED |
@@ -72,7 +91,8 @@ const modMasks: Record<ElementType, number> = {
         Modifier.STATIC |
         Modifier.FINAL |
         Modifier.TRANSIENT |
-        Modifier.VOLATILE,
+        Modifier.VOLATILE |
+        Modifier.SYNTHETIC,
     [ElementType.PARAMETER]: Modifier.FINAL,
 };
 
@@ -91,6 +111,10 @@ export const formatMod = (mod: number, element?: ElementType): string => {
     if ((mod & Modifier.SYNCHRONIZED) !== 0) result += "synchronized ";
     if ((mod & Modifier.TRANSIENT) !== 0) result += "transient ";
     if ((mod & Modifier.VOLATILE) !== 0) result += "volatile ";
+    if ((mod & Modifier.SUPER) !== 0) result += "super ";
+    if ((mod & Modifier.BRIDGE) !== 0) result += "bridge ";
+    if ((mod & Modifier.VARARGS) !== 0) result += "varargs ";
+    if ((mod & Modifier.SYNTHETIC) !== 0) result += "synthetic ";
 
     return result;
 };
@@ -466,6 +490,8 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
         nodeType = NodeType.INTERFACE;
     } else if ((node.access & Modifier.ENUM) !== 0) {
         nodeType = NodeType.ENUM;
+    } else if ((node.access & Modifier.MODULE) !== 0) {
+        nodeType = NodeType.MODULE;
     }
 
     let result = "";
