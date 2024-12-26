@@ -52,25 +52,10 @@ const modMasks: Record<ElementType, number> = {
         Modifier.ABSTRACT |
         Modifier.STATIC |
         Modifier.FINAL |
-        Modifier.STRICT |
-        Modifier.SUPER |
-        Modifier.SYNTHETIC,
+        Modifier.STRICT,
     [ElementType.INTERFACE]:
-        Modifier.PUBLIC |
-        Modifier.PROTECTED |
-        Modifier.PRIVATE |
-        Modifier.ABSTRACT |
-        Modifier.STATIC |
-        Modifier.STRICT |
-        Modifier.SUPER |
-        Modifier.SYNTHETIC,
-    [ElementType.CONSTRUCTOR]:
-        Modifier.PUBLIC |
-        Modifier.PROTECTED |
-        Modifier.PRIVATE |
-        Modifier.BRIDGE |
-        Modifier.VARARGS |
-        Modifier.SYNTHETIC,
+        Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE | Modifier.ABSTRACT | Modifier.STATIC | Modifier.STRICT,
+    [ElementType.CONSTRUCTOR]: Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE,
     [ElementType.METHOD]:
         Modifier.PUBLIC |
         Modifier.PROTECTED |
@@ -80,10 +65,7 @@ const modMasks: Record<ElementType, number> = {
         Modifier.FINAL |
         Modifier.SYNCHRONIZED |
         Modifier.NATIVE |
-        Modifier.STRICT |
-        Modifier.BRIDGE |
-        Modifier.VARARGS |
-        Modifier.SYNTHETIC,
+        Modifier.STRICT,
     [ElementType.FIELD]:
         Modifier.PUBLIC |
         Modifier.PROTECTED |
@@ -91,12 +73,12 @@ const modMasks: Record<ElementType, number> = {
         Modifier.STATIC |
         Modifier.FINAL |
         Modifier.TRANSIENT |
-        Modifier.VOLATILE |
-        Modifier.SYNTHETIC,
+        Modifier.VOLATILE,
     [ElementType.PARAMETER]: Modifier.FINAL,
 };
 
 export const formatMod = (mod: number, element?: ElementType): string => {
+    const uMod = mod; // unmasked
     mod = mod & (element ? modMasks[element] || 0 : 0);
 
     let result = "";
@@ -111,10 +93,18 @@ export const formatMod = (mod: number, element?: ElementType): string => {
     if ((mod & Modifier.SYNCHRONIZED) !== 0) result += "synchronized ";
     if ((mod & Modifier.TRANSIENT) !== 0) result += "transient ";
     if ((mod & Modifier.VOLATILE) !== 0) result += "volatile ";
-    if ((mod & Modifier.SUPER) !== 0) result += "super ";
-    if ((mod & Modifier.BRIDGE) !== 0) result += "bridge ";
-    if ((mod & Modifier.VARARGS) !== 0) result += "varargs ";
-    if ((mod & Modifier.SYNTHETIC) !== 0) result += "synthetic ";
+
+    // unmasked modifier checks for non-Java modifiers
+    if ((uMod & Modifier.SYNTHETIC) !== 0) result += "synthetic ";
+    if (element === ElementType.CLASS || element === ElementType.INTERFACE) {
+        // logical classes
+        if ((uMod & Modifier.SUPER) !== 0) result += "super ";
+    }
+    if (element === ElementType.METHOD || element === ElementType.CONSTRUCTOR) {
+        // logical methods
+        if ((uMod & Modifier.BRIDGE) !== 0) result += "bridge ";
+        if ((uMod & Modifier.VARARGS) !== 0) result += "varargs ";
+    }
 
     return result;
 };
