@@ -1,6 +1,6 @@
 {
     "name": "@run-slicer/asm",
-    "version": "0.9.4",
+    "version": "0.10.0",
     "type": "module",
     "author": "run-slicer",
     "license": "MIT",

@@ -17,12 +17,14 @@ import type {
 } from "../pool";
 import type {
     ArrayInstruction,
+    BranchInstruction,
     ConstantInstruction,
     IncrementInstruction,
     Instruction,
     InvokeInstruction,
     LoadStoreInstruction,
     PushInstruction,
+    SwitchInstruction,
     TypeInstruction,
     WideInstruction,
 } from "../insn";
@@ -217,7 +219,7 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
     }
 };
 
-export const formatInsn = (insn: Instruction, pool: Pool): string => {
+export const formatInsn = (insn: Instruction, pool: Pool, branchOffsets: boolean = true): string => {
     let value = Opcode[insn.opcode]?.toLowerCase() || "<unknown opcode>";
     switch (insn.opcode) {
         case Opcode.ALOAD:
@@ -280,6 +282,43 @@ export const formatInsn = (insn: Instruction, pool: Pool): string => {
                 value += ` ${arrayInsn.dimensions}`;
             }
             break;
+        }
+    }
+
+    if (branchOffsets) {
+        switch (insn.opcode) {
+            case Opcode.TABLESWITCH:
+            case Opcode.LOOKUPSWITCH: {
+                const { defaultOffset, jumpOffsets } = insn as SwitchInstruction;
+
+                value += ` default:${insn.offset + defaultOffset}`;
+                if (jumpOffsets.length > 0) {
+                    value += ` branch:${jumpOffsets.map((o) => insn.offset + o).join(", ")}`;
+                }
+                break;
+            }
+            case Opcode.GOTO:
+            case Opcode.GOTO_W:
+            case Opcode.IFEQ:
+            case Opcode.IFNE:
+            case Opcode.IFLT:
+            case Opcode.IFGE:
+            case Opcode.IFGT:
+            case Opcode.IFLE:
+            case Opcode.IF_ICMPEQ:
+            case Opcode.IF_ICMPNE:
+            case Opcode.IF_ICMPLT:
+            case Opcode.IF_ICMPGE:
+            case Opcode.IF_ICMPGT:
+            case Opcode.IF_ICMPLE:
+            case Opcode.IF_ACMPEQ:
+            case Opcode.IF_ACMPNE:
+            case Opcode.JSR:
+            case Opcode.JSR_W:
+            case Opcode.IFNULL:
+            case Opcode.IFNONNULL:
+                value += ` ${insn.offset + (insn as BranchInstruction).branchOffset}`;
+                break;
         }
     }
 
@@ -395,10 +434,37 @@ const splitDescs = (descs: string): string[] => {
 
 const block = (s: string, indent: string): string => s.replaceAll(/^(?!\s*$)/gm, indent);
 
-const disassembleCode = (code: CodeAttribute, pool: Pool): string => {
+const disassembleCode = (code: CodeAttribute, pool: Pool, indent: string, refHolder: ReferenceHolder): string => {
+    const padding = code.insns[code.insns.length - 1].offset.toString().length;
+    let level = 0;
+
     let result = "";
     for (const insn of code.insns) {
-        result += `// ${formatInsn(insn, pool)}\n`;
+        const excEntries = code.exceptionTable
+            .map((entry, index) => ({ entry, index }))
+            .filter(({ entry }) => entry.startPC === insn.offset || entry.endPC === insn.offset)
+            .sort(({ entry }) => (entry.startPC === insn.offset ? 1 : -1));
+
+        for (const { index: y, entry: excEntry } of excEntries) {
+            if (excEntry.startPC === insn.offset) {
+                result += `${indent.repeat(level)}try {\n`;
+                level++;
+            } else {
+                // excEntry.endPC === insn.offset
+                level--;
+                result += `${indent.repeat(level)}} catch (`;
+                if (excEntry.catchType === 0) {
+                    result += `${refHolder.name("java/lang/Throwable")} /* 0 */`;
+                } else {
+                    result += refHolder.name(
+                        (pool[(pool[excEntry.catchType] as ClassEntry).name] as UTF8Entry).decode()
+                    );
+                }
+                result += ` exc${y}) {\n${indent.repeat(level + 1)}// goto ${excEntry.handlerPC}\n${indent.repeat(level)}}\n`;
+            }
+        }
+
+        result += `${indent.repeat(level)}// ${insn.offset.toString().padStart(padding, " ")}: ${formatInsn(insn, pool)}\n`;
     }
 
     return result;
@@ -446,7 +512,9 @@ const disassembleMethod0 = (
     }
 
     const code = method.attrs.find((a) => a.name === AttributeType.CODE);
-    result += code ? ` {\n${block(disassembleCode(code as CodeAttribute, node.pool), indent)}}\n` : ";\n";
+    result += code
+        ? ` {\n${block(disassembleCode(code as CodeAttribute, node.pool, indent, refHolder), indent)}}\n`
+        : ";\n";
 
     if (writeRefs) {
         const refs = refHolder.refs();
