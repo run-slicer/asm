@@ -460,7 +460,7 @@ const disassembleCode = (code: CodeAttribute, pool: Pool, indent: string, refHol
                         (pool[(pool[excEntry.catchType] as ClassEntry).name] as UTF8Entry).decode()
                     );
                 }
-                result += ` exc${y}) {\n${indent.repeat(level + 1)}// goto ${excEntry.handlerPC}\n${indent.repeat(level)}}\n`;
+                result += ` exc${y}) {\n${indent.repeat(level + 1)}/* goto ${excEntry.handlerPC} */\n${indent.repeat(level)}}\n`;
             }
         }
 
