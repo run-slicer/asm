@@ -1,5 +1,6 @@
 import { ConstantType, HandleKind } from "./spec";
 import type { Buffer } from "./buffer";
+import type { DirtyMarkable } from "./";
 
 export interface Entry {
     type: ConstantType;
@@ -24,11 +25,10 @@ export interface ClassEntry extends Entry {
     name: number; // UTF8Entry index
 }
 
-export interface UTF8Entry extends Entry {
+export interface UTF8Entry extends Entry, DirtyMarkable {
     type: ConstantType.UTF8;
-    data: Uint8Array;
-
-    decode(): string;
+    string: string; // mark as dirty if you want the writer to encode the string into bytes
+    bytes: Uint8Array;
 }
 
 export interface StringEntry extends Entry {
@@ -78,14 +78,14 @@ const readSingle = (buffer: Buffer, index: number): Entry => {
     switch (type) {
         case ConstantType.UTF8:
             const length = buffer.getUint16();
+            const data = buffer.get(length, true);
 
             return {
                 type,
                 index,
-                data: buffer.get(length),
-                decode(): string {
-                    return decoder.decode(this.data);
-                },
+                string: decoder.decode(data),
+                bytes: data,
+                dirty: false,
             } as UTF8Entry;
         case ConstantType.INTEGER:
             return { type, index, value: buffer.getInt32() } as NumberEntry;
@@ -153,14 +153,19 @@ export const readPool = (buffer: Buffer): Pool => {
     return pool;
 };
 
+const encoder = new TextEncoder();
 const writeSingle = (buffer: Buffer, entry: Entry) => {
     buffer.setUint8(entry.type);
     switch (entry.type) {
         case ConstantType.UTF8:
             const utf8Entry = entry as UTF8Entry;
+            if (utf8Entry.dirty) {
+                utf8Entry.bytes = encoder.encode(utf8Entry.string);
+                utf8Entry.dirty = false;
+            }
 
-            buffer.setUint16(utf8Entry.data.length);
-            buffer.set(utf8Entry.data);
+            buffer.setUint16(utf8Entry.bytes.length);
+            buffer.set(utf8Entry.bytes);
             break;
         case ConstantType.INTEGER:
             buffer.setInt32((entry as NumberEntry).value);

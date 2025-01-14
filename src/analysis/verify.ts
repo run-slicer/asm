@@ -16,7 +16,7 @@ const getAllowedContext = (attr: Attribute): AttributeContext => {
         return AttributeContext.NONE;
     }
 
-    switch (attr.name) {
+    switch (attr.name.string) {
         case AttributeType.BOOTSTRAP_METHODS:
         case AttributeType.ENCLOSING_METHOD:
         case AttributeType.INNER_CLASSES:
@@ -93,7 +93,7 @@ const check = (attrib: Attributable, ctx: AttributeContext): boolean => {
 };
 
 const filter = (attrib: Attributable, name: string): boolean => {
-    const valid = attrib.attrs.filter((a) => a.name !== name);
+    const valid = attrib.attrs.filter((a) => a.name?.string !== name);
     const dirty = attrib.attrs.length > valid.length;
 
     attrib.attrs = valid;

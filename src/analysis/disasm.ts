@@ -176,7 +176,7 @@ export const escapeLiteral = (s: string): string =>
 export const formatEntry = (entry: Entry, pool: Pool): string => {
     switch (entry.type) {
         case ConstantType.UTF8:
-            return (entry as UTF8Entry).decode();
+            return (entry as UTF8Entry).string;
         case ConstantType.INTEGER:
         case ConstantType.FLOAT:
         case ConstantType.LONG:
@@ -202,7 +202,7 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
         case ConstantType.NAME_AND_TYPE: {
             const ntEntry = entry as NameTypeEntry;
 
-            return `${escapeLiteral((pool[ntEntry.name] as UTF8Entry).decode())} ${escapeLiteral((pool[ntEntry.type_] as UTF8Entry).decode())}`;
+            return `${escapeLiteral((pool[ntEntry.name] as UTF8Entry).string)} ${escapeLiteral((pool[ntEntry.type_] as UTF8Entry).string)}`;
         }
         case ConstantType.DYNAMIC:
         case ConstantType.INVOKE_DYNAMIC: {
@@ -456,9 +456,7 @@ const disassembleCode = (code: CodeAttribute, pool: Pool, indent: string, refHol
                 if (excEntry.catchType === 0) {
                     result += `${refHolder.name("java/lang/Throwable")} /* 0 */`;
                 } else {
-                    result += refHolder.name(
-                        (pool[(pool[excEntry.catchType] as ClassEntry).name] as UTF8Entry).decode()
-                    );
+                    result += refHolder.name((pool[(pool[excEntry.catchType] as ClassEntry).name] as UTF8Entry).string);
                 }
                 result += ` exc${y}) {\n${indent.repeat(level + 1)}/* goto ${excEntry.handlerPC} */\n${indent.repeat(level)}}\n`;
             }
@@ -479,14 +477,14 @@ const disassembleMethod0 = (
 ): string => {
     let result = "";
 
-    const signature = method.attrs.find((a) => a.name === AttributeType.SIGNATURE);
+    const signature = method.attrs.find((a) => a.name?.string === AttributeType.SIGNATURE);
     if (signature) {
-        result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.decode())}\n`;
+        result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
 
     const isStatic = (method.access & Modifier.STATIC) !== 0;
 
-    let name = method.name.decode();
+    let name = method.name.string;
     if (name === "<clinit>" && isStatic) {
         result += "static"; // static initializer
     } else {
@@ -494,9 +492,9 @@ const disassembleMethod0 = (
 
         result += formatMod(method.access, isConstructor ? ElementType.CONSTRUCTOR : ElementType.METHOD);
 
-        const [args, returnType] = method.type.decode().substring(1).split(")", 2);
+        const [args, returnType] = method.type.string.substring(1).split(")", 2);
         if (isConstructor) {
-            const nodeName = (node.pool[node.thisClass.name] as UTF8Entry).decode();
+            const nodeName = (node.pool[node.thisClass.name] as UTF8Entry).string;
             refHolder.name(nodeName); // reserve name
 
             name = nodeName.substring(nodeName.lastIndexOf("/") + 1);
@@ -511,7 +509,7 @@ const disassembleMethod0 = (
         result += ")";
     }
 
-    const code = method.attrs.find((a) => a.name === AttributeType.CODE);
+    const code = method.attrs.find((a) => a.name?.string === AttributeType.CODE);
     result += code
         ? ` {\n${block(disassembleCode(code as CodeAttribute, node.pool, indent, refHolder), indent)}}\n`
         : ";\n";
@@ -529,13 +527,13 @@ const disassembleMethod0 = (
 const disassembleField = (field: Member, refHolder: ReferenceHolder): string => {
     let result = "";
 
-    const signature = field.attrs.find((a) => a.name === AttributeType.SIGNATURE);
+    const signature = field.attrs.find((a) => a.name?.string === AttributeType.SIGNATURE);
     if (signature) {
-        result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.decode())}\n`;
+        result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
 
     result += formatMod(field.access, ElementType.FIELD);
-    result += `${formatDesc(field.type.decode(), refHolder)} ${escapeLiteral(field.name.decode())};\n`;
+    result += `${formatDesc(field.type.string, refHolder)} ${escapeLiteral(field.name.string)};\n`;
 
     return result;
 };
@@ -554,16 +552,16 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
 
     let result = "";
 
-    const name = (node.pool[node.thisClass.name] as UTF8Entry).decode();
+    const name = (node.pool[node.thisClass.name] as UTF8Entry).string;
     refHolder.name(name); // reserve name
 
     const slashIndex = name.lastIndexOf("/");
     const packageName = slashIndex !== -1 ? name.substring(0, slashIndex) : null;
     const simpleName = slashIndex !== -1 ? name.substring(slashIndex + 1) : name;
 
-    const signature = node.attrs.find((a) => a.name === AttributeType.SIGNATURE);
+    const signature = node.attrs.find((a) => a.name?.string === AttributeType.SIGNATURE);
     if (signature) {
-        result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.decode())}\n`;
+        result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
 
     result += formatMod(
@@ -574,11 +572,11 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
     result += `${nodeType} ${escapeLiteral(simpleName)} `;
 
     if (node.superClass) {
-        const superName = (node.pool[node.superClass.name] as UTF8Entry).decode();
+        const superName = (node.pool[node.superClass.name] as UTF8Entry).string;
         result += `extends ${refHolder.name(superName)} `;
     }
     if (node.interfaces.length !== 0) {
-        const ifNames = node.interfaces.map((i) => refHolder.name((node.pool[i.name] as UTF8Entry).decode()));
+        const ifNames = node.interfaces.map((i) => refHolder.name((node.pool[i.name] as UTF8Entry).string));
         result += `implements ${ifNames.join(", ")} `;
     }
 
@@ -607,10 +605,10 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
     if (packageName) {
         result = `package ${escapeLiteral(packageName).replaceAll("/", ".")};\n\n` + result;
     }
-    const sourceFile = node.attrs.find((a) => a.name === AttributeType.SOURCE_FILE);
+    const sourceFile = node.attrs.find((a) => a.name?.string === AttributeType.SOURCE_FILE);
     if (sourceFile) {
         result =
-            `// Source file: ${escapeString((sourceFile as SourceFileAttribute).sourceFileEntry?.decode())}\n` + result;
+            `// Source file: ${escapeString((sourceFile as SourceFileAttribute).sourceFileEntry?.string)}\n` + result;
     }
 
     return result;

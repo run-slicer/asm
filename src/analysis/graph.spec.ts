@@ -64,13 +64,13 @@ describe("graph computation", () => {
             const clazz = read(data);
 
             for (const method of clazz.methods) {
-                const attr = method.attrs.find((a) => a.name === AttributeType.CODE);
+                const attr = method.attrs.find((a) => a.name?.string === AttributeType.CODE);
                 if (!attr) {
                     continue;
                 }
 
                 const code = attr as CodeAttribute;
-                console.log(`method ${method.name.decode()}${method.type.decode()}`);
+                console.log(`method ${method.name.string}${method.type.string}`);
 
                 const graph = computeGraph(code);
                 for (let i = 0; i < graph.nodes.length; i++) {

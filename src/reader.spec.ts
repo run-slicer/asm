@@ -13,7 +13,7 @@ describe("reader", () => {
 
         expect(result.magic).equal(0xcafebabe);
 
-        const name = (result.pool[result.thisClass.name] as UTF8Entry).decode();
+        const name = (result.pool[result.thisClass.name] as UTF8Entry).string;
         expect(name).equal("sample/string/StringsLong");
 
         // for (const attribute of result.attributes) {
@@ -25,7 +25,7 @@ describe("reader", () => {
 const markDirty = (attrib: Attributable) => {
     for (const attr of attrib.attrs) {
         attr.dirty = true;
-        if (attr.name === AttributeType.CODE) {
+        if (attr.name?.string === AttributeType.CODE) {
             const code = attr as CodeAttribute;
             for (const insn of code.insns) {
                 insn.dirty = true;

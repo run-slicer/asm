@@ -1,10 +1,8 @@
 import type { Pool, UTF8Entry } from "../pool";
 import { create, wrap } from "../buffer";
 import type { Attribute } from "./";
-import { AttributeType } from "../spec";
 
 export interface SourceFileAttribute extends Attribute {
-    name: AttributeType.SOURCE_FILE;
     sourceFileIndex: number; // UTF8Entry index
 
     sourceFileEntry?: UTF8Entry;
@@ -16,7 +14,6 @@ export const readSourceFile = (attr: Attribute, pool: Pool): SourceFileAttribute
     const sourceFileIndex = buffer.getUint16();
     return {
         ...attr,
-        name: AttributeType.SOURCE_FILE,
         sourceFileIndex,
         sourceFileEntry: pool[sourceFileIndex] as UTF8Entry | undefined,
     };

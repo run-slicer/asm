@@ -12,7 +12,7 @@ export interface Buffer {
     offset: number;
     littleEndian?: boolean;
 
-    get(length: number): Uint8Array;
+    get(length: number, copy?: boolean): Uint8Array;
     getFloat32(): number;
     getFloat64(): number;
     getInt8(): number;
@@ -67,12 +67,16 @@ export const wrap = (buf: Uint8Array, littleEndian: boolean = DEFAULT_LITTLE_END
             return viewToArray(this.view);
         },
 
-        get(length: number): Uint8Array {
+        get(length: number, copy: boolean = false): Uint8Array {
             if (this.offset + length > this.view.byteLength) {
                 throw new Error(`Wanted ${length} byte(s), ${this.view.byteLength - this.offset} remaining`);
             }
 
-            const value = new Uint8Array(this.view.buffer, this.view.byteOffset + this.offset, length);
+            const baseOffset = this.view.byteOffset + this.offset;
+            const value = copy
+                ? new Uint8Array(this.view.buffer.slice(baseOffset, baseOffset + length))
+                : new Uint8Array(this.view.buffer, baseOffset, length);
+
             this.offset += length;
             return value;
         },

@@ -10,9 +10,7 @@ export interface Attribute extends DirtyMarkable {
     nameIndex: number;
     data: Uint8Array;
 
-    // not present if index is invalid
-    name?: string; // arbitrary name or built-ins from AttributeType
-    nameEntry?: UTF8Entry;
+    name?: UTF8Entry; // not present if index is invalid
 }
 
 export interface Attributable {
@@ -21,7 +19,7 @@ export interface Attributable {
 
 const readSingle = (buffer: Buffer, pool: Pool): Attribute => {
     const nameIndex = buffer.getUint16();
-    const nameEntry = pool[nameIndex] as UTF8Entry | undefined;
+    const name = pool[nameIndex] as UTF8Entry | undefined;
 
     const data = buffer.get(buffer.getInt32());
 
@@ -29,10 +27,9 @@ const readSingle = (buffer: Buffer, pool: Pool): Attribute => {
         dirty: false,
         nameIndex,
         data,
-        name: nameEntry?.decode(),
-        nameEntry,
+        name,
     };
-    switch (attr.name) {
+    switch (name?.string) {
         case AttributeType.CODE: {
             attr = readCode(attr, pool);
             break;
@@ -64,11 +61,8 @@ export const readAttrs = (buffer: Buffer, pool: Pool): Attribute[] => {
 const writeSingle = (buffer: Buffer, attr: Attribute) => {
     if (attr.dirty) {
         // rebuild data if dirty
-        if (attr.nameEntry) {
-            attr.nameIndex = attr.nameEntry.index;
-            attr.name = attr.nameEntry.decode();
-
-            switch (attr.name) {
+        if (attr.name) {
+            switch (attr.name?.string) {
                 case AttributeType.CODE: {
                     attr.data = writeCode(attr as CodeAttribute);
                     break;
