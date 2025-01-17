@@ -7,6 +7,7 @@ import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./sou
 import { type SignatureAttribute, readSignature, writeSignature } from "./signature";
 
 export interface Attribute extends DirtyMarkable {
+    type?: AttributeType;
     nameIndex: number;
     data: Uint8Array;
 
@@ -29,19 +30,24 @@ const readSingle = (buffer: Buffer, pool: Pool): Attribute => {
         data,
         name,
     };
-    switch (name?.string) {
-        case AttributeType.CODE: {
-            attr = readCode(attr, pool);
-            break;
+    try {
+        switch (name?.string) {
+            case AttributeType.CODE: {
+                attr = readCode(attr, pool);
+                break;
+            }
+            case AttributeType.SOURCE_FILE: {
+                attr = readSourceFile(attr, pool);
+                break;
+            }
+            case AttributeType.SIGNATURE: {
+                attr = readSignature(attr, pool);
+                break;
+            }
         }
-        case AttributeType.SOURCE_FILE: {
-            attr = readSourceFile(attr, pool);
-            break;
-        }
-        case AttributeType.SIGNATURE: {
-            attr = readSignature(attr, pool);
-            break;
-        }
+    } catch (e) {
+        console.warn(`failed to parse ${name?.string || "unknown"} attribute, data length ${data.length}`);
+        console.error(e);
     }
 
     return attr;
@@ -61,20 +67,18 @@ export const readAttrs = (buffer: Buffer, pool: Pool): Attribute[] => {
 const writeSingle = (buffer: Buffer, attr: Attribute) => {
     if (attr.dirty) {
         // rebuild data if dirty
-        if (attr.name) {
-            switch (attr.name?.string) {
-                case AttributeType.CODE: {
-                    attr.data = writeCode(attr as CodeAttribute);
-                    break;
-                }
-                case AttributeType.SOURCE_FILE: {
-                    attr.data = writeSourceFile(attr as SourceFileAttribute);
-                    break;
-                }
-                case AttributeType.SIGNATURE: {
-                    attr.data = writeSignature(attr as SignatureAttribute);
-                    break;
-                }
+        switch (attr.type) {
+            case AttributeType.CODE: {
+                attr.data = writeCode(attr as CodeAttribute);
+                break;
+            }
+            case AttributeType.SOURCE_FILE: {
+                attr.data = writeSourceFile(attr as SourceFileAttribute);
+                break;
+            }
+            case AttributeType.SIGNATURE: {
+                attr.data = writeSignature(attr as SignatureAttribute);
+                break;
             }
         }
 

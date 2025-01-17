@@ -64,7 +64,7 @@ describe("graph computation", () => {
             const clazz = read(data);
 
             for (const method of clazz.methods) {
-                const attr = method.attrs.find((a) => a.name?.string === AttributeType.CODE);
+                const attr = method.attrs.find((a) => a.type === AttributeType.CODE);
                 if (!attr) {
                     continue;
                 }
@@ -81,6 +81,9 @@ describe("graph computation", () => {
 
                     const lastInsn = node.insns[node.insns.length - 1];
                     expect(node.leaf).equal(TERMINAL_OPCODES.has(lastInsn.opcode));
+                    /*if (!TERMINAL_OPCODES.has(lastInsn.opcode)) {
+                        console.warn(`non-terminal opcode in leaf node: ${lastInsn.opcode} (${Opcode[lastInsn.opcode]})`);
+                    }*/
 
                     let edgeCount = 0;
                     for (let j = 0; j < graph.edges.length; j++) {

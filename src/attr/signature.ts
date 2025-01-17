@@ -1,8 +1,10 @@
 import type { Pool, UTF8Entry } from "../pool";
 import { create, wrap } from "../buffer";
 import type { Attribute } from "./";
+import { AttributeType } from "../spec";
 
 export interface SignatureAttribute extends Attribute {
+    type: AttributeType.SIGNATURE;
     signatureIndex: number; // UTF8Entry index
 
     signatureEntry?: UTF8Entry;
@@ -14,6 +16,7 @@ export const readSignature = (attr: Attribute, pool: Pool): SignatureAttribute =
     const signatureIndex = buffer.getUint16();
     return {
         ...attr,
+        type: AttributeType.SIGNATURE,
         signatureIndex,
         signatureEntry: pool[signatureIndex] as UTF8Entry | undefined,
     };

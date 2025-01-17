@@ -477,7 +477,7 @@ const disassembleMethod0 = (
 ): string => {
     let result = "";
 
-    const signature = method.attrs.find((a) => a.name?.string === AttributeType.SIGNATURE);
+    const signature = method.attrs.find((a) => a.type === AttributeType.SIGNATURE);
     if (signature) {
         result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
@@ -509,7 +509,7 @@ const disassembleMethod0 = (
         result += ")";
     }
 
-    const code = method.attrs.find((a) => a.name?.string === AttributeType.CODE);
+    const code = method.attrs.find((a) => a.type === AttributeType.CODE);
     result += code
         ? ` {\n${block(disassembleCode(code as CodeAttribute, node.pool, indent, refHolder), indent)}}\n`
         : ";\n";
@@ -527,7 +527,7 @@ const disassembleMethod0 = (
 const disassembleField = (field: Member, refHolder: ReferenceHolder): string => {
     let result = "";
 
-    const signature = field.attrs.find((a) => a.name?.string === AttributeType.SIGNATURE);
+    const signature = field.attrs.find((a) => a.type === AttributeType.SIGNATURE);
     if (signature) {
         result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
@@ -559,7 +559,7 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
     const packageName = slashIndex !== -1 ? name.substring(0, slashIndex) : null;
     const simpleName = slashIndex !== -1 ? name.substring(slashIndex + 1) : name;
 
-    const signature = node.attrs.find((a) => a.name?.string === AttributeType.SIGNATURE);
+    const signature = node.attrs.find((a) => a.type === AttributeType.SIGNATURE);
     if (signature) {
         result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
@@ -605,7 +605,7 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
     if (packageName) {
         result = `package ${escapeLiteral(packageName).replaceAll("/", ".")};\n\n` + result;
     }
-    const sourceFile = node.attrs.find((a) => a.name?.string === AttributeType.SOURCE_FILE);
+    const sourceFile = node.attrs.find((a) => a.type === AttributeType.SOURCE_FILE);
     if (sourceFile) {
         result =
             `// Source file: ${escapeString((sourceFile as SourceFileAttribute).sourceFileEntry?.string)}\n` + result;

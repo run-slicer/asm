@@ -12,7 +12,7 @@ describe("reachability", () => {
             const node = read(data);
 
             for (const method of node.methods) {
-                const attr = method.attrs.find((a) => a.name?.string === AttributeType.CODE);
+                const attr = method.attrs.find((a) => a.type === AttributeType.CODE);
                 if (!attr) {
                     continue;
                 }
