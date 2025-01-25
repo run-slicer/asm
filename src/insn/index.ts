@@ -1,15 +1,15 @@
-import { Opcode } from "../spec";
 import type { DirtyMarkable } from "../";
-import { type SwitchInstruction, readSwitch, writeSwitch } from "./switch";
+import { Opcode } from "../spec";
+import { type ArrayInstruction, readArray, writeArray } from "./array";
 import { type BranchInstruction, readBranch, writeBranch } from "./branch";
-import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
 import { type IncrementInstruction, readIinc, writeIinc } from "./iinc";
-import { type WideInstruction, readWide, writeWide } from "./wide";
 import { type InvokeInstruction, readInvoke, writeInvoke } from "./invoke";
 import { type ConstantInstruction, readLdc, writeLdc } from "./ldc";
-import { type TypeInstruction, readType, writeType } from "./type";
+import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
 import { type PushInstruction, readPush, writePush } from "./push";
-import { type ArrayInstruction, readArray, writeArray } from "./array";
+import { type SwitchInstruction, readSwitch, writeSwitch } from "./switch";
+import { type TypeInstruction, readType, writeType } from "./type";
+import { type WideInstruction, readWide, writeWide } from "./wide";
 
 const operandLengths: Record<number, number> = {
     [Opcode.NOP]: 0,
@@ -483,14 +483,14 @@ export const writeInsns = (insns: Instruction[]): Uint8Array => {
 };
 
 export {
-    SwitchInstruction,
-    BranchInstruction,
-    LoadStoreInstruction,
-    IncrementInstruction,
-    WideInstruction,
-    InvokeInstruction,
-    ConstantInstruction,
-    TypeInstruction,
-    PushInstruction,
     ArrayInstruction,
+    BranchInstruction,
+    ConstantInstruction,
+    IncrementInstruction,
+    InvokeInstruction,
+    LoadStoreInstruction,
+    PushInstruction,
+    SwitchInstruction,
+    TypeInstruction,
+    WideInstruction,
 };

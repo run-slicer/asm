@@ -1,6 +1,6 @@
-import { Instruction } from "./";
-import { Opcode } from "../spec";
 import { create, wrap } from "../buffer";
+import { Opcode } from "../spec";
+import { Instruction } from "./";
 
 export interface LoadStoreInstruction extends Instruction {
     opcode:

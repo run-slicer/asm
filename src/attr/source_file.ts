@@ -1,7 +1,7 @@
-import type { Pool, UTF8Entry } from "../pool";
 import { create, wrap } from "../buffer";
-import type { Attribute } from "./";
+import type { Pool, UTF8Entry } from "../pool";
 import { AttributeType } from "../spec";
+import type { Attribute } from "./";
 
 export interface SourceFileAttribute extends Attribute {
     type: AttributeType.SOURCE_FILE;

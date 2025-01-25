@@ -1,6 +1,6 @@
-import { type Instruction } from "./";
-import { Opcode } from "../spec";
 import { create, wrap } from "../buffer";
+import { Opcode } from "../spec";
+import { type Instruction } from "./";
 
 export interface TypeInstruction extends Instruction {
     opcode: Opcode.CHECKCAST | Opcode.INSTANCEOF | Opcode.NEW;

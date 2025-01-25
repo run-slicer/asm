@@ -1,6 +1,6 @@
-import { AttributeType, Modifier } from "../spec";
-import type { Attributable, Attribute } from "../attr";
 import type { DirtyMarkable, Node } from "../";
+import type { Attributable, Attribute } from "../attr";
+import { AttributeType, Modifier } from "../spec";
 
 const enum AttributeContext {
     NONE = 0,

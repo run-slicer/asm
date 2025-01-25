@@ -1,5 +1,5 @@
-import { Opcode } from "../spec";
 import { create, wrap } from "../buffer";
+import { Opcode } from "../spec";
 import { Instruction } from "./";
 
 const TYPICAL_SWITCH_SIZE = 16;

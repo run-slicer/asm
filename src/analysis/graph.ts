@@ -1,6 +1,6 @@
+import type { CodeAttribute } from "../attr";
 import type { BranchInstruction, Instruction, SwitchInstruction } from "../insn";
 import { Opcode } from "../spec";
-import type { CodeAttribute } from "../attr";
 
 const TERMINAL_OPCODES = new Set<number>([
     Opcode.IRETURN,

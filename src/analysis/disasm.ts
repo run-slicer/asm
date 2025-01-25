@@ -1,6 +1,18 @@
-import { ArrayCode, AttributeType, ConstantType, HandleKind, Modifier, Opcode } from "../spec";
 import type { Member, Node } from "../";
 import type { CodeAttribute, SignatureAttribute, SourceFileAttribute } from "../attr";
+import type {
+    ArrayInstruction,
+    BranchInstruction,
+    ConstantInstruction,
+    IncrementInstruction,
+    Instruction,
+    InvokeInstruction,
+    LoadStoreInstruction,
+    PushInstruction,
+    SwitchInstruction,
+    TypeInstruction,
+    WideInstruction,
+} from "../insn";
 import type {
     ClassEntry,
     DynamicEntry,
@@ -15,19 +27,7 @@ import type {
     StringEntry,
     UTF8Entry,
 } from "../pool";
-import type {
-    ArrayInstruction,
-    BranchInstruction,
-    ConstantInstruction,
-    IncrementInstruction,
-    Instruction,
-    InvokeInstruction,
-    LoadStoreInstruction,
-    PushInstruction,
-    SwitchInstruction,
-    TypeInstruction,
-    WideInstruction,
-} from "../insn";
+import { ArrayCode, AttributeType, ConstantType, HandleKind, Modifier, Opcode } from "../spec";
 
 export enum NodeType {
     CLASS = "class",

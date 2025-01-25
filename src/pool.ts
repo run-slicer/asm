@@ -1,6 +1,6 @@
-import { ConstantType, HandleKind } from "./spec";
-import type { Buffer } from "./buffer";
 import type { DirtyMarkable } from "./";
+import type { Buffer } from "./buffer";
+import { ConstantType, HandleKind } from "./spec";
 
 export interface Entry {
     type: ConstantType;

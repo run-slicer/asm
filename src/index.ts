@@ -1,6 +1,6 @@
-import { type ClassEntry, type UTF8Entry, type Pool, readPool, writePool } from "./pool";
 import { type Attributable, readAttrs, writeAttrs } from "./attr";
 import { type Buffer, create, wrap } from "./buffer";
+import { type ClassEntry, type Pool, readPool, type UTF8Entry, writePool } from "./pool";
 
 export interface DirtyMarkable {
     dirty: boolean;
@@ -25,16 +25,18 @@ export interface Node extends Attributable {
     methods: Member[];
 }
 
-const readMember = (buffer: Buffer, pool: Pool): Member => {
+const readMember = (buffer: Buffer, pool: Pool, flags: number): Member => {
     return {
         access: buffer.getUint16(),
         name: pool[buffer.getUint16()] as UTF8Entry,
         type: pool[buffer.getUint16()] as UTF8Entry,
-        attrs: readAttrs(buffer, pool),
+        attrs: readAttrs(buffer, pool, flags),
     };
 };
 
-export const read = (buf: Uint8Array): Node => {
+export const FLAG_SKIP_ATTR = 1 << 0;
+
+export const read = (buf: Uint8Array, flags: number = 0): Node => {
     const buffer = wrap(buf);
 
     const node: Partial<Node> = {
@@ -63,17 +65,17 @@ export const read = (buf: Uint8Array): Node => {
 
     node.fields = new Array(fieldsCount);
     for (let i = 0; i < fieldsCount; i++) {
-        node.fields[i] = readMember(buffer, node.pool);
+        node.fields[i] = readMember(buffer, node.pool, flags);
     }
 
     const methodsCount = buffer.getUint16();
 
     node.methods = new Array(methodsCount);
     for (let i = 0; i < methodsCount; i++) {
-        node.methods[i] = readMember(buffer, node.pool);
+        node.methods[i] = readMember(buffer, node.pool, flags);
     }
 
-    node.attrs = readAttrs(buffer, node.pool);
+    node.attrs = readAttrs(buffer, node.pool, flags);
 
     return node as Node;
 };

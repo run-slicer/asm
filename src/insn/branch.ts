@@ -1,6 +1,6 @@
+import { create, wrap } from "../buffer";
 import { Opcode } from "../spec";
 import { Instruction } from "./";
-import { create, wrap } from "../buffer";
 
 export interface BranchInstruction extends Instruction {
     opcode:

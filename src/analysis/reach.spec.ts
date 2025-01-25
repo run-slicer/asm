@@ -1,9 +1,9 @@
+import { expect } from "chai";
 import { readFileSync } from "node:fs";
 import { read } from "../";
-import { scanReachable } from "./reach";
-import { AttributeType } from "../spec";
 import type { CodeAttribute } from "../attr";
-import { expect } from "chai";
+import { AttributeType } from "../spec";
+import { scanReachable } from "./reach";
 
 describe("reachability", () => {
     const register = (path: string, expected: number) => {

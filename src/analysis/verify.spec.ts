@@ -1,4 +1,4 @@
-import { readFileSync, opendirSync, type Dirent } from "node:fs";
+import { opendirSync, readFileSync, type Dirent } from "node:fs";
 import { join } from "node:path";
 import { read, write } from "../";
 import { verify } from "./verify";

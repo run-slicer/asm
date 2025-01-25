@@ -1,8 +1,8 @@
-import { Instruction } from "./";
-import { Opcode } from "../spec";
 import { create, wrap } from "../buffer";
-import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
+import { Opcode } from "../spec";
+import { Instruction } from "./";
 import { type IncrementInstruction, readIinc, writeIinc } from "./iinc";
+import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
 
 export interface WideInstruction extends Instruction {
     opcode: Opcode.WIDE;

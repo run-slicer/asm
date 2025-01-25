@@ -1,6 +1,6 @@
-import { Instruction } from "./";
-import { Opcode } from "../spec";
 import { create, wrap } from "../buffer";
+import { Opcode } from "../spec";
+import { Instruction } from "./";
 
 export interface ConstantInstruction extends Instruction {
     opcode: Opcode.LDC | Opcode.LDC_W | Opcode.LDC2_W;

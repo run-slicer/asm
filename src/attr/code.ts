@@ -1,8 +1,8 @@
+import { create, wrap } from "../buffer";
 import { type Instruction, readInsns, writeInsns } from "../insn";
 import type { Pool } from "../pool";
-import { create, wrap } from "../buffer";
-import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./";
 import { AttributeType } from "../spec";
+import { type Attributable, type Attribute, readAttrs, writeAttrs } from "./";
 
 const TYPICAL_CODE_LENGTH = 8096 /* instructions */ + 16; /* exception table */
 
@@ -21,7 +21,7 @@ export interface CodeAttribute extends Attribute, Attributable {
     exceptionTable: ExceptionTableEntry[];
 }
 
-export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
+export const readCode = (attr: Attribute, pool: Pool, flags: number = 0): CodeAttribute => {
     const buffer = wrap(attr.data);
 
     const codeAttr: Partial<CodeAttribute> = {
@@ -46,7 +46,7 @@ export const readCode = (attr: Attribute, pool: Pool): CodeAttribute => {
         };
     }
 
-    codeAttr.attrs = readAttrs(buffer, pool);
+    codeAttr.attrs = readAttrs(buffer, pool, flags);
 
     return codeAttr as CodeAttribute;
 };

@@ -1,6 +1,6 @@
-import type { Instruction } from "./";
-import { Opcode, ArrayCode } from "../spec";
 import { create, wrap } from "../buffer";
+import { ArrayCode, Opcode } from "../spec";
+import type { Instruction } from "./";
 
 export interface ArrayInstruction extends Instruction {
     opcode: Opcode.ANEWARRAY | Opcode.NEWARRAY | Opcode.MULTIANEWARRAY;

@@ -1,10 +1,10 @@
-import type { Pool, UTF8Entry } from "../pool";
+import { type DirtyMarkable, FLAG_SKIP_ATTR } from "../";
 import type { Buffer } from "../buffer";
+import type { Pool, UTF8Entry } from "../pool";
 import { AttributeType } from "../spec";
 import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
-import type { DirtyMarkable } from "../";
-import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./source_file";
 import { type SignatureAttribute, readSignature, writeSignature } from "./signature";
+import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./source_file";
 
 export interface Attribute extends DirtyMarkable {
     type?: AttributeType;
@@ -18,11 +18,11 @@ export interface Attributable {
     attrs: Attribute[];
 }
 
-const readSingle = (buffer: Buffer, pool: Pool): Attribute => {
+const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
     const nameIndex = buffer.getUint16();
     const name = pool[nameIndex] as UTF8Entry | undefined;
 
-    const data = buffer.get(buffer.getInt32());
+    const data = buffer.get(buffer.getInt32(), true);
 
     let attr: Attribute = {
         dirty: false,
@@ -30,35 +30,37 @@ const readSingle = (buffer: Buffer, pool: Pool): Attribute => {
         data,
         name,
     };
-    try {
-        switch (name?.string) {
-            case AttributeType.CODE: {
-                attr = readCode(attr, pool);
-                break;
+    if ((flags & FLAG_SKIP_ATTR) === 0) {
+        try {
+            switch (name?.string) {
+                case AttributeType.CODE: {
+                    attr = readCode(attr, pool, flags);
+                    break;
+                }
+                case AttributeType.SOURCE_FILE: {
+                    attr = readSourceFile(attr, pool);
+                    break;
+                }
+                case AttributeType.SIGNATURE: {
+                    attr = readSignature(attr, pool);
+                    break;
+                }
             }
-            case AttributeType.SOURCE_FILE: {
-                attr = readSourceFile(attr, pool);
-                break;
-            }
-            case AttributeType.SIGNATURE: {
-                attr = readSignature(attr, pool);
-                break;
-            }
+        } catch (e) {
+            console.warn(`failed to parse ${name?.string || "unknown"} attribute, data length ${data.length}`);
+            console.error(e);
         }
-    } catch (e) {
-        console.warn(`failed to parse ${name?.string || "unknown"} attribute, data length ${data.length}`);
-        console.error(e);
     }
 
     return attr;
 };
 
-export const readAttrs = (buffer: Buffer, pool: Pool): Attribute[] => {
+export const readAttrs = (buffer: Buffer, pool: Pool, flags: number = 0): Attribute[] => {
     const attributesCount = buffer.getUint16();
 
     const attributes = new Array<Attribute>(attributesCount);
     for (let i = 0; i < attributesCount; i++) {
-        attributes[i] = readSingle(buffer, pool);
+        attributes[i] = readSingle(buffer, pool, flags);
     }
 
     return attributes;
@@ -97,4 +99,4 @@ export const writeAttrs = (buffer: Buffer, attrs: Attribute[]) => {
     }
 };
 
-export { CodeAttribute, SourceFileAttribute, SignatureAttribute, ExceptionTableEntry };
+export { CodeAttribute, ExceptionTableEntry, SignatureAttribute, SourceFileAttribute };

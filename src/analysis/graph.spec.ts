@@ -1,11 +1,11 @@
-import { type Dirent, opendirSync, readFileSync } from "node:fs";
-import { read } from "../index";
-import { join } from "node:path";
-import { AttributeType, Opcode } from "../spec";
-import type { CodeAttribute } from "../attr";
-import { computeGraph } from "./graph";
 import { expect } from "chai";
+import { type Dirent, opendirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { read } from "../";
+import type { CodeAttribute } from "../attr";
 import type { Instruction, SwitchInstruction } from "../insn";
+import { AttributeType, Opcode } from "../spec";
+import { computeGraph } from "./graph";
 
 const TERMINAL_OPCODES = new Set<number>([
     Opcode.IRETURN,
