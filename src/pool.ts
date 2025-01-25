@@ -1,5 +1,5 @@
 import type { DirtyMarkable } from "./";
-import type { Buffer } from "./buffer";
+import { type Buffer, wrap } from "./buffer";
 import { ConstantType, HandleKind } from "./spec";
 
 export interface Entry {
@@ -78,7 +78,7 @@ const readSingle = (buffer: Buffer, index: number): Entry => {
     switch (type) {
         case ConstantType.UTF8:
             const length = buffer.getUint16();
-            const data = buffer.get(length, true);
+            const data = buffer.get(length);
 
             return {
                 type,
@@ -135,14 +135,68 @@ const readSingle = (buffer: Buffer, index: number): Entry => {
     }
 };
 
+// computes the total length of the constant pool entry space and resets the cursor
+const computeLength = (buffer: Buffer, size: number): number => {
+    let length = 0;
+
+    for (let i = 1; i < size; i++) {
+        const type = buffer.getUint8();
+        length += 1;
+
+        switch (type) {
+            case ConstantType.UTF8:
+                const len = buffer.getUint16();
+                buffer.offset += len;
+                length += 2 + len;
+                break;
+            case ConstantType.INTEGER:
+            case ConstantType.FLOAT:
+            case ConstantType.FIELDREF:
+            case ConstantType.METHODREF:
+            case ConstantType.INTERFACE_METHODREF:
+            case ConstantType.NAME_AND_TYPE:
+            case ConstantType.DYNAMIC:
+            case ConstantType.INVOKE_DYNAMIC:
+                buffer.offset += 4;
+                length += 4;
+                break;
+            case ConstantType.LONG:
+            case ConstantType.DOUBLE:
+                i++;
+                buffer.offset += 8;
+                length += 8;
+                break;
+            case ConstantType.CLASS:
+            case ConstantType.STRING:
+            case ConstantType.METHOD_TYPE:
+            case ConstantType.MODULE:
+            case ConstantType.PACKAGE:
+                buffer.offset += 2;
+                length += 2;
+                break;
+            case ConstantType.METHOD_HANDLE:
+                buffer.offset += 3;
+                length += 3;
+                break;
+            default:
+                throw new Error("Unrecognized constant pool tag " + type + " at position " + i);
+        }
+    }
+
+    buffer.offset -= length;
+    return length;
+};
+
 export const readPool = (buffer: Buffer): Pool => {
     const size = buffer.getUint16();
 
     const pool = new Array<Entry | null>(size);
     pool.fill(null);
 
+    // create a copy of the entire pool, allocating small buffers for each string is expensive
+    const poolBuffer = wrap(buffer.get(computeLength(buffer, size), true));
     for (let i = 1; i < size; i++) {
-        const entry = readSingle(buffer, i);
+        const entry = readSingle(poolBuffer, i);
         pool[i] = entry;
 
         if (entry.type === ConstantType.DOUBLE || entry.type === ConstantType.LONG) {
