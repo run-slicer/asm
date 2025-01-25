@@ -1,4 +1,4 @@
-import { type DirtyMarkable, FLAG_SKIP_ATTR } from "../";
+import { type DirtyMarkable, FLAG_SKIP_ATTR, FLAG_SKIP_ATTR_PARSE } from "../";
 import type { Buffer } from "../buffer";
 import type { Pool, UTF8Entry } from "../pool";
 import { AttributeType } from "../spec";
@@ -30,7 +30,7 @@ const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
         data,
         name,
     };
-    if ((flags & FLAG_SKIP_ATTR) === 0) {
+    if ((flags & FLAG_SKIP_ATTR_PARSE) === 0) {
         try {
             switch (name?.string) {
                 case AttributeType.CODE: {
@@ -58,9 +58,19 @@ const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
 export const readAttrs = (buffer: Buffer, pool: Pool, flags: number = 0): Attribute[] => {
     const attributesCount = buffer.getUint16();
 
-    const attributes = new Array<Attribute>(attributesCount);
-    for (let i = 0; i < attributesCount; i++) {
-        attributes[i] = readSingle(buffer, pool, flags);
+    let attributes: Attribute[] = [];
+    if ((flags & FLAG_SKIP_ATTR) === 0) {
+        attributes = new Array<Attribute>(attributesCount);
+        for (let i = 0; i < attributesCount; i++) {
+            attributes[i] = readSingle(buffer, pool, flags);
+        }
+    } else {
+        // skip attributes entirely
+        for (let i = 0; i < attributesCount; i++) {
+            buffer.offset += 2;
+            const length = buffer.getInt32();
+            buffer.offset += length;
+        }
     }
 
     return attributes;

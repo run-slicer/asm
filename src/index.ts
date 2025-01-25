@@ -35,6 +35,7 @@ const readMember = (buffer: Buffer, pool: Pool, flags: number): Member => {
 };
 
 export const FLAG_SKIP_ATTR = 1 << 0;
+export const FLAG_SKIP_ATTR_PARSE = 1 << 1;
 
 export const read = (buf: Uint8Array, flags: number = 0): Node => {
     const buffer = wrap(buf);

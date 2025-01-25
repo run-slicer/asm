@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { opendirSync, readFileSync, type Dirent } from "node:fs";
 import { join } from "node:path";
-import { read, write } from "./";
+import { FLAG_SKIP_ATTR, read, write } from "./";
 import type { Attributable, CodeAttribute } from "./attr";
 import type { UTF8Entry } from "./pool";
 import { AttributeType } from "./spec";
@@ -37,6 +37,10 @@ const markDirty = (attrib: Attributable) => {
 describe("reader+writer", () => {
     const register = (path: string) => {
         const expected = new Uint8Array(readFileSync(path));
+        it(`read ${path}`, () => {
+            read(expected, FLAG_SKIP_ATTR);
+        });
+
         it(`round-trip ${path}`, () => {
             const node = read(expected);
 
