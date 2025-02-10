@@ -1,5 +1,11 @@
 import type { CodeAttribute } from "../attr";
-import type { BranchInstruction, Instruction, SwitchInstruction } from "../insn";
+import type {
+    BranchInstruction,
+    Instruction,
+    LookupSwitchInstruction,
+    SwitchInstruction,
+    TableSwitchInstruction,
+} from "../insn";
 import { Opcode } from "../spec";
 
 const TERMINAL_OPCODES = new Set<number>([
@@ -31,6 +37,8 @@ export interface UndirectedEdge {
     type: EdgeType;
     target: number;
     jump: boolean;
+
+    value?: number; // for SWITCH_BRANCH
 }
 
 export interface Edge extends UndirectedEdge {
@@ -48,12 +56,16 @@ const getTargetEdges = (insn: Instruction): UndirectedEdge[] => {
         case Opcode.LOOKUPSWITCH: {
             const { defaultOffset, jumpOffsets } = insn as SwitchInstruction;
 
+            const lowCase = (insn as TableSwitchInstruction).lowCase;
+            const cases = (insn as LookupSwitchInstruction).cases;
+
             return [
                 { target: insn.offset + defaultOffset, type: EdgeType.SWITCH_DEFAULT, jump: true },
-                ...jumpOffsets.map((offset) => ({
+                ...jumpOffsets.map((offset, i) => ({
                     target: insn.offset + offset,
                     type: EdgeType.SWITCH_BRANCH,
                     jump: true,
+                    value: insn.opcode === Opcode.TABLESWITCH ? lowCase + i : cases[i],
                 })),
             ];
         }

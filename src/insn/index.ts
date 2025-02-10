@@ -7,7 +7,13 @@ import { type InvokeInstruction, readInvoke, writeInvoke } from "./invoke";
 import { type ConstantInstruction, readLdc, writeLdc } from "./ldc";
 import { type LoadStoreInstruction, readLoadStore, writeLoadStore } from "./load_store";
 import { type PushInstruction, readPush, writePush } from "./push";
-import { type SwitchInstruction, readSwitch, writeSwitch } from "./switch";
+import {
+    type LookupSwitchInstruction,
+    type SwitchInstruction,
+    type TableSwitchInstruction,
+    readSwitch,
+    writeSwitch,
+} from "./switch";
 import { type TypeInstruction, readType, writeType } from "./type";
 import { type WideInstruction, readWide, writeWide } from "./wide";
 
@@ -489,8 +495,10 @@ export {
     IncrementInstruction,
     InvokeInstruction,
     LoadStoreInstruction,
+    LookupSwitchInstruction,
     PushInstruction,
     SwitchInstruction,
+    TableSwitchInstruction,
     TypeInstruction,
     WideInstruction,
 };
