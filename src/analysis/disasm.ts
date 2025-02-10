@@ -1,5 +1,6 @@
 import type { Member, Node } from "../";
 import type { CodeAttribute, SignatureAttribute, SourceFileAttribute } from "../attr";
+import { findFrameLocals } from "../attr/lvt";
 import type {
     ArrayInstruction,
     BranchInstruction,
@@ -159,19 +160,25 @@ for (const range of literalUnicodeEscapeRanges) {
     }
 }
 
-for (const [value, key] of baseEscapes) {
+for (const [key, value] of baseEscapes.entries()) {
     literalEscapes.set(key, value);
 }
 
-export const escapeString = (s: string): string =>
-    Array.from(s)
-        .map((char) => baseEscapes.get(char) ?? char)
-        .join("");
+export const escapeString = (s?: string): string => {
+    if (!s) return "";
 
-export const escapeLiteral = (s: string): string =>
-    Array.from(s)
-        .map((char) => literalEscapes.get(char) ?? char)
+    return Array.from(s)
+        .map((c) => baseEscapes.get(c) ?? c)
         .join("");
+};
+
+export const escapeLiteral = (s?: string): string => {
+    if (!s) return "";
+
+    return Array.from(s)
+        .map((c) => literalEscapes.get(c) ?? c)
+        .join("");
+};
 
 export const formatEntry = (entry: Entry, pool: Pool): string => {
     switch (entry.type) {
@@ -219,7 +226,22 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
     }
 };
 
-export const formatInsn = (insn: Instruction, pool: Pool, branchOffsets: boolean = true): string => {
+const formatLvtLoadStore = (code: CodeAttribute, insn: Instruction, index: number): string => {
+    const local = findFrameLocals(code, insn.offset).find((l) => l.index === index);
+
+    return local
+        ? `${escapeLiteral(local.nameEntry?.string)} ${escapeLiteral(local.descriptorEntry?.string)}`
+        : index.toString();
+};
+
+export const formatInsn = (
+    code: CodeAttribute,
+    insn: Instruction,
+    pool: Pool,
+    branchOffsets: boolean = true
+): string => {
+    const mnemonic = Opcode[insn.opcode];
+
     let value = Opcode[insn.opcode]?.toLowerCase() || "<unknown opcode>";
     switch (insn.opcode) {
         case Opcode.ALOAD:
@@ -233,7 +255,7 @@ export const formatInsn = (insn: Instruction, pool: Pool, branchOffsets: boolean
         case Opcode.LLOAD:
         case Opcode.LSTORE:
         case Opcode.RET:
-            value += ` ${(insn as LoadStoreInstruction).index}`;
+            value += ` ${formatLvtLoadStore(code, insn, (insn as LoadStoreInstruction).index)}`;
             break;
         case Opcode.GETFIELD:
         case Opcode.GETSTATIC:
@@ -244,11 +266,11 @@ export const formatInsn = (insn: Instruction, pool: Pool, branchOffsets: boolean
         case Opcode.IINC: {
             const iincInsn = insn as IncrementInstruction;
 
-            value += ` ${iincInsn.index} ${iincInsn.const}`;
+            value += ` ${formatLvtLoadStore(code, insn, iincInsn.index)} ${iincInsn.const}`;
             break;
         }
         case Opcode.WIDE:
-            value += ` ${formatInsn((insn as WideInstruction).insn, pool)}`;
+            value += ` ${formatInsn(code, (insn as WideInstruction).insn, pool)}`;
             break;
         case Opcode.INVOKEDYNAMIC:
         case Opcode.INVOKEINTERFACE:
@@ -282,6 +304,16 @@ export const formatInsn = (insn: Instruction, pool: Pool, branchOffsets: boolean
                 value += ` ${arrayInsn.dimensions}`;
             }
             break;
+        }
+    }
+
+    const lsMatch = mnemonic?.match(/^[ADFIL](?:LOAD|STORE)_([0-3])$/);
+    if (lsMatch) {
+        const formatted = formatLvtLoadStore(code, insn, parseInt(lsMatch[1], 10));
+
+        // skip repeating index when no local is found
+        if (formatted !== lsMatch[1]) {
+            value += ` ${formatted}`;
         }
     }
 
@@ -462,7 +494,7 @@ const disassembleCode = (code: CodeAttribute, pool: Pool, indent: string, refHol
             }
         }
 
-        result += `${indent.repeat(level)}// ${insn.offset.toString().padStart(padding, " ")}: ${formatInsn(insn, pool)}\n`;
+        result += `${indent.repeat(level)}// ${insn.offset.toString().padStart(padding, " ")}: ${formatInsn(code, insn, pool)}\n`;
     }
 
     return result;

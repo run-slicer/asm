@@ -3,6 +3,12 @@ import type { Buffer } from "../buffer";
 import type { Pool, UTF8Entry } from "../pool";
 import { AttributeType } from "../spec";
 import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
+import {
+    type LocalVariable,
+    type LocalVariableTableAttribute,
+    readLocalVariableTable,
+    writeLocalVariableTable,
+} from "./lvt";
 import { type SignatureAttribute, readSignature, writeSignature } from "./signature";
 import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./source_file";
 
@@ -43,6 +49,10 @@ const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
                 }
                 case AttributeType.SIGNATURE: {
                     attr = readSignature(attr, pool);
+                    break;
+                }
+                case AttributeType.LOCAL_VARIABLE_TABLE: {
+                    attr = readLocalVariableTable(attr, pool);
                     break;
                 }
             }
@@ -92,6 +102,10 @@ const writeSingle = (buffer: Buffer, attr: Attribute) => {
                 attr.data = writeSignature(attr as SignatureAttribute);
                 break;
             }
+            case AttributeType.LOCAL_VARIABLE_TABLE: {
+                attr.data = writeLocalVariableTable(attr as LocalVariableTableAttribute);
+                break;
+            }
         }
 
         attr.dirty = false;
@@ -109,4 +123,11 @@ export const writeAttrs = (buffer: Buffer, attrs: Attribute[]) => {
     }
 };
 
-export { CodeAttribute, ExceptionTableEntry, SignatureAttribute, SourceFileAttribute };
+export {
+    CodeAttribute,
+    ExceptionTableEntry,
+    LocalVariable,
+    LocalVariableTableAttribute,
+    SignatureAttribute,
+    SourceFileAttribute,
+};

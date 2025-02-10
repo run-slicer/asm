@@ -25,6 +25,11 @@ describe("reader", () => {
 const markDirty = (attrib: Attributable) => {
     for (const attr of attrib.attrs) {
         attr.dirty = true;
+        if ("attrs" in attr) {
+            markDirty(attr as Attributable);
+        }
+
+        // mark instructions as dirty
         if (attr.type === AttributeType.CODE) {
             const code = attr as CodeAttribute;
             for (const insn of code.insns) {
