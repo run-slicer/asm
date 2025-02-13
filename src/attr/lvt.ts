@@ -84,3 +84,15 @@ export const findLocals = (attrib: Attributable, offset: number): LocalVariable[
 
     return locals;
 };
+
+export const localSize = (desc: string): number => {
+    switch (desc) {
+        case "D":
+        case "J":
+            return 2;
+        case "V":
+            return 0;
+    }
+
+    return 1;
+};

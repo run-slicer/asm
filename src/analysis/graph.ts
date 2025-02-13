@@ -1,9 +1,5 @@
 import type { CodeAttribute } from "../attr";
-import type {
-    BranchInstruction,
-    Instruction,
-    SwitchInstruction,
-} from "../insn";
+import type { BranchInstruction, Instruction, SwitchInstruction } from "../insn";
 import { findSwitchValue } from "../insn/switch";
 import { Opcode } from "../spec";
 

@@ -1,6 +1,6 @@
 import type { Member, Node } from "../";
 import type { CodeAttribute, SignatureAttribute, SourceFileAttribute } from "../attr";
-import { findLocals } from "../attr/lvt";
+import { findLocals, localSize } from "../attr/lvt";
 import type {
     ArrayInstruction,
     BranchInstruction,
@@ -537,12 +537,13 @@ const disassembleMethod0 = (
         }
 
         const locals = code ? findLocals(code, 0) : [];
+        let localIndex = isStatic ? 0 : 1;
 
         result += `${escapeLiteral(name)}(`;
         result += splitDescs(args)
-            .map((desc, i) => {
-                const localIndex = i + (isStatic ? 0 : 1);
+            .map((desc) => {
                 const localName = locals.find((l) => l.index === localIndex)?.nameEntry?.string || `var${localIndex}`;
+                localIndex += localSize(desc);
 
                 return `${formatDesc(desc, refHolder)} ${escapeLiteral(localName)}`;
             })
