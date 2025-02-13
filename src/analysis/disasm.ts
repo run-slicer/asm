@@ -49,16 +49,8 @@ export enum ElementType {
 }
 
 const modMasks: Record<ElementType, number> = {
-    [ElementType.CLASS]:
-        Modifier.PUBLIC |
-        Modifier.PROTECTED |
-        Modifier.PRIVATE |
-        Modifier.ABSTRACT |
-        Modifier.STATIC |
-        Modifier.FINAL |
-        Modifier.STRICT,
-    [ElementType.INTERFACE]:
-        Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE | Modifier.ABSTRACT | Modifier.STATIC | Modifier.STRICT,
+    [ElementType.CLASS]: Modifier.PUBLIC | Modifier.ABSTRACT | Modifier.FINAL,
+    [ElementType.INTERFACE]: Modifier.PUBLIC | Modifier.ABSTRACT,
     [ElementType.CONSTRUCTOR]: Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE,
     [ElementType.METHOD]:
         Modifier.PUBLIC |
@@ -83,7 +75,7 @@ const modMasks: Record<ElementType, number> = {
 
 export const formatMod = (mod: number, element?: ElementType): string => {
     const uMod = mod; // unmasked
-    mod = mod & (element ? modMasks[element] || 0 : 0);
+    mod = mod & (modMasks[element] ?? 0);
 
     let result = "";
     if ((mod & Modifier.PUBLIC) !== 0) result += "public ";
