@@ -1,6 +1,6 @@
 import type { Member, Node } from "../";
 import type { CodeAttribute, SignatureAttribute, SourceFileAttribute } from "../attr";
-import { findFrameLocals } from "../attr/lvt";
+import { findLocals } from "../attr/lvt";
 import type {
     ArrayInstruction,
     BranchInstruction,
@@ -14,6 +14,7 @@ import type {
     TypeInstruction,
     WideInstruction,
 } from "../insn";
+import { findSwitchValue } from "../insn/switch";
 import type {
     ClassEntry,
     DynamicEntry,
@@ -226,8 +227,8 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
     }
 };
 
-const formatLvtLoadStore = (code: CodeAttribute, insn: Instruction, index: number): string => {
-    const local = findFrameLocals(code, insn.offset).find((l) => l.index === index);
+const formatLoadStore = (code: CodeAttribute, insn: Instruction, index: number): string => {
+    const local = findLocals(code, insn.offset).find((l) => l.index === index);
 
     return local
         ? `${escapeLiteral(local.nameEntry?.string)} ${escapeLiteral(local.descriptorEntry?.string)}`
@@ -240,9 +241,9 @@ export const formatInsn = (
     pool: Pool,
     branchOffsets: boolean = true
 ): string => {
-    const mnemonic = Opcode[insn.opcode];
+    const mnemonic = Opcode[insn.opcode]?.toLowerCase();
 
-    let value = Opcode[insn.opcode]?.toLowerCase() || "<unknown opcode>";
+    let value = mnemonic || "<unknown opcode>";
     switch (insn.opcode) {
         case Opcode.ALOAD:
         case Opcode.ASTORE:
@@ -255,7 +256,7 @@ export const formatInsn = (
         case Opcode.LLOAD:
         case Opcode.LSTORE:
         case Opcode.RET:
-            value += ` ${formatLvtLoadStore(code, insn, (insn as LoadStoreInstruction).index)}`;
+            value += ` ${formatLoadStore(code, insn, (insn as LoadStoreInstruction).index)}`;
             break;
         case Opcode.GETFIELD:
         case Opcode.GETSTATIC:
@@ -266,7 +267,7 @@ export const formatInsn = (
         case Opcode.IINC: {
             const iincInsn = insn as IncrementInstruction;
 
-            value += ` ${formatLvtLoadStore(code, insn, iincInsn.index)} ${iincInsn.const}`;
+            value += ` ${formatLoadStore(code, insn, iincInsn.index)} ${iincInsn.const}`;
             break;
         }
         case Opcode.WIDE:
@@ -307,13 +308,13 @@ export const formatInsn = (
         }
     }
 
-    const lsMatch = mnemonic?.match(/^[ADFIL](?:LOAD|STORE)_([0-3])$/);
+    const lsMatch = mnemonic?.match(/^([adfil](?:load|store))_([0-3])$/);
     if (lsMatch) {
-        const formatted = formatLvtLoadStore(code, insn, parseInt(lsMatch[1], 10));
+        const formatted = formatLoadStore(code, insn, parseInt(lsMatch[2], 10));
 
         // skip repeating index when no local is found
-        if (formatted !== lsMatch[1]) {
-            value += ` ${formatted}`;
+        if (formatted !== lsMatch[2]) {
+            value = `${lsMatch[1]} ${formatted}`;
         }
     }
 
@@ -323,9 +324,9 @@ export const formatInsn = (
             case Opcode.LOOKUPSWITCH: {
                 const { defaultOffset, jumpOffsets } = insn as SwitchInstruction;
 
-                value += ` default:${insn.offset + defaultOffset}`;
+                value += ` default->${insn.offset + defaultOffset}`;
                 if (jumpOffsets.length > 0) {
-                    value += ` branch:${jumpOffsets.map((o) => insn.offset + o).join(", ")}`;
+                    value += ` ${jumpOffsets.map((o, i) => `${findSwitchValue(insn as SwitchInstruction, i)}->${insn.offset + o}`).join(" ")}`;
                 }
                 break;
             }
@@ -514,6 +515,7 @@ const disassembleMethod0 = (
         result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
 
+    const code = method.attrs.find((a) => a.type === AttributeType.CODE) as CodeAttribute;
     const isStatic = (method.access & Modifier.STATIC) !== 0;
 
     let name = method.name.string;
@@ -534,17 +536,21 @@ const disassembleMethod0 = (
             result += `${formatDesc(returnType, refHolder)} `;
         }
 
+        const locals = code ? findLocals(code, 0) : [];
+
         result += `${escapeLiteral(name)}(`;
         result += splitDescs(args)
-            .map((desc, i) => `${formatDesc(desc, refHolder)} var${i + (isStatic ? 0 : 1)}`)
+            .map((desc, i) => {
+                const localIndex = i + (isStatic ? 0 : 1);
+                const localName = locals.find((l) => l.index === localIndex)?.nameEntry?.string || `var${localIndex}`;
+
+                return `${formatDesc(desc, refHolder)} ${escapeLiteral(localName)}`;
+            })
             .join(", ");
         result += ")";
     }
 
-    const code = method.attrs.find((a) => a.type === AttributeType.CODE);
-    result += code
-        ? ` {\n${block(disassembleCode(code as CodeAttribute, node.pool, indent, refHolder), indent)}}\n`
-        : ";\n";
+    result += code ? ` {\n${block(disassembleCode(code, node.pool, indent, refHolder), indent)}}\n` : ";\n";
 
     if (writeRefs) {
         const refs = refHolder.refs();
