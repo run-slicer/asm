@@ -220,7 +220,9 @@ export const formatEntry = (entry: Entry, pool: Pool): string => {
 };
 
 const formatLoadStore = (code: CodeAttribute, insn: Instruction, index: number): string => {
-    const local = findLocals(code, insn.offset).find((l) => l.index === index);
+    const local = findLocals(code, insn.offset + insn.length /* occupied on next instruction */).find(
+        (l) => l.index === index
+    );
 
     return local
         ? `${escapeLiteral(local.nameEntry?.string)} ${escapeLiteral(local.descriptorEntry?.string)}`
