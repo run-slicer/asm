@@ -3,14 +3,16 @@ import type { Buffer } from "../buffer";
 import type { Pool, UTF8Entry } from "../pool";
 import { AttributeType } from "../spec";
 import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
+import { type ConstantValueAttribute, readConstantValue, writeConstantValue } from "./constant_value";
+import { type ExceptionEntry, type ExceptionsAttribute, readExceptions, writeExceptions } from "./exceptions";
 import {
     type LocalVariable,
     type LocalVariableTableAttribute,
     readLocalVariableTable,
     writeLocalVariableTable,
 } from "./lvt";
-import { type SignatureAttribute, readSignature, writeSignature } from "./signature";
-import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./source_file";
+import { readSignature, type SignatureAttribute, writeSignature } from "./signature";
+import { readSourceFile, type SourceFileAttribute, writeSourceFile } from "./source_file";
 
 export interface Attribute extends DirtyMarkable {
     type?: AttributeType;
@@ -39,22 +41,24 @@ const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
     if ((flags & FLAG_SKIP_ATTR_PARSE) === 0) {
         try {
             switch (name?.string) {
-                case AttributeType.CODE: {
+                case AttributeType.CODE:
                     attr = readCode(attr, pool, flags);
                     break;
-                }
-                case AttributeType.SOURCE_FILE: {
+                case AttributeType.SOURCE_FILE:
                     attr = readSourceFile(attr, pool);
                     break;
-                }
-                case AttributeType.SIGNATURE: {
+                case AttributeType.SIGNATURE:
                     attr = readSignature(attr, pool);
                     break;
-                }
-                case AttributeType.LOCAL_VARIABLE_TABLE: {
+                case AttributeType.LOCAL_VARIABLE_TABLE:
                     attr = readLocalVariableTable(attr, pool);
                     break;
-                }
+                case AttributeType.EXCEPTIONS:
+                    attr = readExceptions(attr, pool);
+                    break;
+                case AttributeType.CONSTANT_VALUE:
+                    attr = readConstantValue(attr, pool);
+                    break;
             }
         } catch (e) {
             console.warn(`failed to parse ${name?.string || "unknown"} attribute, data length ${data.length}`);
@@ -90,22 +94,24 @@ const writeSingle = (buffer: Buffer, attr: Attribute) => {
     if (attr.dirty) {
         // rebuild data if dirty
         switch (attr.type) {
-            case AttributeType.CODE: {
+            case AttributeType.CODE:
                 attr.data = writeCode(attr as CodeAttribute);
                 break;
-            }
-            case AttributeType.SOURCE_FILE: {
+            case AttributeType.SOURCE_FILE:
                 attr.data = writeSourceFile(attr as SourceFileAttribute);
                 break;
-            }
-            case AttributeType.SIGNATURE: {
+            case AttributeType.SIGNATURE:
                 attr.data = writeSignature(attr as SignatureAttribute);
                 break;
-            }
-            case AttributeType.LOCAL_VARIABLE_TABLE: {
+            case AttributeType.LOCAL_VARIABLE_TABLE:
                 attr.data = writeLocalVariableTable(attr as LocalVariableTableAttribute);
                 break;
-            }
+            case AttributeType.EXCEPTIONS:
+                attr.data = writeExceptions(attr as ExceptionsAttribute);
+                break;
+            case AttributeType.CONSTANT_VALUE:
+                attr.data = writeConstantValue(attr as ConstantValueAttribute);
+                break;
         }
 
         attr.dirty = false;
@@ -125,6 +131,9 @@ export const writeAttrs = (buffer: Buffer, attrs: Attribute[]) => {
 
 export {
     CodeAttribute,
+    ConstantValueAttribute,
+    ExceptionEntry,
+    ExceptionsAttribute,
     ExceptionTableEntry,
     LocalVariable,
     LocalVariableTableAttribute,

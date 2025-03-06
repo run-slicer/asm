@@ -30,4 +30,6 @@ describe("disassembly", () => {
     register("samples/base/sample/string/StringsDuplicates.class");
     register("samples/zkm/sample/string/StringsDummyApp.class");
     register("samples/base/sample/math/Longs.class");
+    register("samples/base/sample/misc/Exceptions.class");
+    register("samples/base/sample/misc/Annotations.class");
 });

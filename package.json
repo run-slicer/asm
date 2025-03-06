@@ -1,6 +1,6 @@
 {
     "name": "@run-slicer/asm",
-    "version": "0.13.4",
+    "version": "0.14.0",
     "type": "module",
     "author": "run-slicer",
     "license": "MIT",
@@ -61,15 +61,15 @@
         "format": "prettier . --write"
     },
     "devDependencies": {
-        "@types/chai": "^5.0.1",
+        "@types/chai": "^5.2.0",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.10.10",
-        "chai": "^5.1.2",
+        "@types/node": "^22.13.9",
+        "chai": "^5.2.0",
         "mocha": "^11.1.0",
-        "prettier": "^3.4.2",
+        "prettier": "^3.5.3",
         "prettier-plugin-organize-imports": "^4.1.0",
-        "tsx": "^4.19.2",
-        "typescript": "^5.7.3"
+        "tsx": "^4.19.3",
+        "typescript": "^5.8.2"
     },
-    "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
+    "packageManager": "pnpm@10.6.0+sha512.df0136e797db0cfa7ec1084e77f3bdf81bacbae9066832fbf95cba4c2140ad05e64f316cde51ce3f99ea00a91ffc702d6aedd3c0f450f895e3e7c052fe573cd8"
 }

@@ -1,5 +1,12 @@
 import type { Member, Node } from "../";
-import type { CodeAttribute, SignatureAttribute, SourceFileAttribute } from "../attr";
+import type {
+    Attributable,
+    CodeAttribute,
+    ConstantValueAttribute,
+    ExceptionsAttribute,
+    SignatureAttribute,
+    SourceFileAttribute,
+} from "../attr";
 import { findLocals, localSize } from "../attr/lvt";
 import type {
     ArrayInstruction,
@@ -461,6 +468,15 @@ const splitDescs = (descs: string): string[] => {
 
 const block = (s: string, indent: string): string => s.replaceAll(/^(?!\s*$)/gm, indent);
 
+const disassembleAnnos = (attrib: Attributable, refHolder: ReferenceHolder): string => {
+    let result = "";
+    if (attrib.attrs.some((a) => a.name.string === AttributeType.DEPRECATED)) {
+        result += `@${refHolder.name("java/lang/Deprecated")}\n`;
+    }
+
+    return result;
+};
+
 const disassembleCode = (code: CodeAttribute, pool: Pool, indent: string, refHolder: ReferenceHolder): string => {
     const padding = code.insns[code.insns.length - 1].offset.toString().length;
     let level = 0;
@@ -518,6 +534,7 @@ const disassembleMethod0 = (
     } else {
         const isConstructor = name === "<init>";
 
+        result += disassembleAnnos(method, refHolder);
         result += formatMod(method.access, isConstructor ? ElementType.CONSTRUCTOR : ElementType.METHOD);
 
         const [args, returnType] = method.type.string.substring(1).split(")", 2);
@@ -543,6 +560,18 @@ const disassembleMethod0 = (
             })
             .join(", ");
         result += ")";
+
+        const exceptions = method.attrs.find((a) => a.type === AttributeType.EXCEPTIONS);
+        if (exceptions) {
+            const entries = (exceptions as ExceptionsAttribute).entries
+                .filter((e) => Boolean(e.entry))
+                .map((e) => refHolder.name((node.pool[e.entry.name] as UTF8Entry).string));
+
+            if (entries.length > 0) {
+                result += " throws ";
+                result += entries.join(", ");
+            }
+        }
     }
 
     result += code ? ` {\n${block(disassembleCode(code, node.pool, indent, refHolder), indent)}}\n` : ";\n";
@@ -557,7 +586,7 @@ const disassembleMethod0 = (
     return result;
 };
 
-const disassembleField = (field: Member, refHolder: ReferenceHolder): string => {
+const disassembleField = (node: Node, field: Member, refHolder: ReferenceHolder): string => {
     let result = "";
 
     const signature = field.attrs.find((a) => a.type === AttributeType.SIGNATURE);
@@ -565,9 +594,20 @@ const disassembleField = (field: Member, refHolder: ReferenceHolder): string => 
         result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
 
+    result += disassembleAnnos(field, refHolder);
     result += formatMod(field.access, ElementType.FIELD);
-    result += `${formatDesc(field.type.string, refHolder)} ${escapeLiteral(field.name.string)};\n`;
+    result += `${formatDesc(field.type.string, refHolder)} ${escapeLiteral(field.name.string)}`;
 
+    // ignore constant values for non-static members as per the JVMS
+    if ((field.access & Modifier.STATIC) !== 0) {
+        const entry = (field.attrs.find((a) => a.type === AttributeType.CONSTANT_VALUE) as ConstantValueAttribute)
+            ?.constEntry;
+        if (entry) {
+            result += ` = ${formatEntry(entry, node.pool)}`;
+        }
+    }
+
+    result += ";\n";
     return result;
 };
 
@@ -597,6 +637,7 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
         result += `// Signature: ${escapeString((signature as SignatureAttribute).signatureEntry?.string)}\n`;
     }
 
+    result += disassembleAnnos(node, refHolder);
     result += formatMod(
         node.access,
         nodeType === NodeType.CLASS || nodeType === NodeType.ENUM ? ElementType.CLASS : ElementType.INTERFACE
@@ -615,7 +656,7 @@ const disassemble0 = (node: Node, indent: string, refHolder: ReferenceHolder, wr
 
     result += "{\n";
     for (const method of node.fields) {
-        result += block(disassembleField(method, refHolder), indent);
+        result += block(disassembleField(node, method, refHolder), indent);
     }
     if (node.fields.length !== 0) result += "\n"; // spacer
     for (const method of node.methods) {
