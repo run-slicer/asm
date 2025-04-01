@@ -2,6 +2,13 @@ import { type DirtyMarkable, FLAG_SKIP_ATTR, FLAG_SKIP_ATTR_PARSE } from "../";
 import type { Buffer } from "../buffer";
 import type { Pool, UTF8Entry } from "../pool";
 import { AttributeType } from "../spec";
+import {
+    type BootstrapMethod,
+    type BootstrapMethodArgument,
+    type BootstrapMethodsAttribute,
+    readBootstrapMethods,
+    writeBootstrapMethods,
+} from "./bsm";
 import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
 import { type ConstantValueAttribute, readConstantValue, writeConstantValue } from "./constant_value";
 import { type ExceptionEntry, type ExceptionsAttribute, readExceptions, writeExceptions } from "./exceptions";
@@ -11,8 +18,8 @@ import {
     readLocalVariableTable,
     writeLocalVariableTable,
 } from "./lvt";
-import { readSignature, type SignatureAttribute, writeSignature } from "./signature";
-import { readSourceFile, type SourceFileAttribute, writeSourceFile } from "./source_file";
+import { type SignatureAttribute, readSignature, writeSignature } from "./signature";
+import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./source_file";
 
 export interface Attribute extends DirtyMarkable {
     type?: AttributeType;
@@ -58,6 +65,9 @@ const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
                     break;
                 case AttributeType.CONSTANT_VALUE:
                     attr = readConstantValue(attr, pool);
+                    break;
+                case AttributeType.BOOTSTRAP_METHODS:
+                    attr = readBootstrapMethods(attr, pool);
                     break;
             }
         } catch (e) {
@@ -112,6 +122,9 @@ const writeSingle = (buffer: Buffer, attr: Attribute) => {
             case AttributeType.CONSTANT_VALUE:
                 attr.data = writeConstantValue(attr as ConstantValueAttribute);
                 break;
+            case AttributeType.BOOTSTRAP_METHODS:
+                attr.data = writeBootstrapMethods(attr as BootstrapMethodsAttribute);
+                break;
         }
 
         attr.dirty = false;
@@ -130,11 +143,14 @@ export const writeAttrs = (buffer: Buffer, attrs: Attribute[]) => {
 };
 
 export {
+    BootstrapMethod,
+    BootstrapMethodArgument,
+    BootstrapMethodsAttribute,
     CodeAttribute,
     ConstantValueAttribute,
     ExceptionEntry,
-    ExceptionsAttribute,
     ExceptionTableEntry,
+    ExceptionsAttribute,
     LocalVariable,
     LocalVariableTableAttribute,
     SignatureAttribute,

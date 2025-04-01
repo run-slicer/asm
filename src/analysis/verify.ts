@@ -1,6 +1,18 @@
 import type { DirtyMarkable, Node } from "../";
-import type { Attributable, Attribute } from "../attr";
-import { AttributeType, Modifier } from "../spec";
+import type {
+    Attributable,
+    Attribute,
+    BootstrapMethodsAttribute,
+    CodeAttribute,
+    ConstantValueAttribute,
+    ExceptionsAttribute,
+    LocalVariableTableAttribute,
+    SignatureAttribute,
+    SourceFileAttribute,
+} from "../attr";
+import type { ConstantInstruction } from "../insn";
+import type { Pool } from "../pool";
+import { AttributeType, ConstantType, Modifier, Opcode } from "../spec";
 
 const enum AttributeContext {
     NONE = 0,
@@ -59,19 +71,65 @@ const getAllowedContext = (attr: Attribute): AttributeContext => {
     );
 };
 
-const checkSingle = (attr: Attribute, ctx: AttributeContext): boolean => {
+const checkPoolAccess = (attr: Attribute, pool: Pool): boolean => {
+    switch (attr.type) {
+        case AttributeType.CODE:
+            return (attr as CodeAttribute).exceptionTable
+                .filter((e) => e.catchType !== 0)
+                .every((e) => pool[e.catchType]?.type === ConstantType.CLASS);
+        case AttributeType.SOURCE_FILE:
+            return (attr as SourceFileAttribute).sourceFileEntry?.type === ConstantType.UTF8;
+        case AttributeType.SIGNATURE:
+            return (attr as SignatureAttribute).signatureEntry?.type === ConstantType.UTF8;
+        case AttributeType.LOCAL_VARIABLE_TABLE:
+            return (attr as LocalVariableTableAttribute).entries.every(
+                (e) => e.nameEntry?.type === ConstantType.UTF8 && e.descriptorEntry?.type === ConstantType.UTF8
+            );
+        case AttributeType.EXCEPTIONS:
+            return (attr as ExceptionsAttribute).entries.every((e) => e.entry?.type === ConstantType.CLASS);
+        case AttributeType.CONSTANT_VALUE:
+            const entry = (attr as ConstantValueAttribute).constEntry;
+            return (
+                entry !== undefined &&
+                ((entry.type >= ConstantType.INTEGER && entry.type <= ConstantType.DOUBLE) ||
+                    entry.type === ConstantType.STRING)
+            );
+        case AttributeType.BOOTSTRAP_METHODS:
+            return (attr as BootstrapMethodsAttribute).methods.every(
+                (m) =>
+                    m.refEntry?.type === ConstantType.METHOD_HANDLE &&
+                    m.args.every(({ entry }) => {
+                        const t = entry?.type;
+
+                        return (
+                            entry !== undefined &&
+                            ((t >= ConstantType.INTEGER && t <= ConstantType.STRING) ||
+                                (t >= ConstantType.METHOD_HANDLE && t <= ConstantType.DYNAMIC))
+                        );
+                    })
+            );
+    }
+
+    return true;
+};
+
+const checkSingle = (attr: Attribute, pool: Pool, ctx: AttributeContext): boolean => {
     if ((getAllowedContext(attr) & ctx) === 0) {
         // attribute not allowed in context
+        return false;
+    }
+    if (!checkPoolAccess(attr, pool)) {
+        // attribute has an invalid constant pool access
         return false;
     }
 
     return true;
 };
 
-const check = (attrib: Attributable, ctx: AttributeContext): boolean => {
+const check = (attrib: Attributable, pool: Pool, ctx: AttributeContext): boolean => {
     let dirty = false;
 
-    const valid = attrib.attrs.filter((a) => checkSingle(a, ctx));
+    const valid = attrib.attrs.filter((a) => checkSingle(a, pool, ctx));
     if (attrib.attrs.length > valid.length) {
         dirty = true; // one or more attributes were removed, dirty
     }
@@ -80,7 +138,7 @@ const check = (attrib: Attributable, ctx: AttributeContext): boolean => {
 
     // check nested attributes
     for (const attr of attrib.attrs) {
-        if ("attrs" in attr && check(attr as Attributable, AttributeContext.ATTRIBUTE)) {
+        if ("attrs" in attr && check(attr as Attributable, pool, AttributeContext.ATTRIBUTE)) {
             dirty = true; // a nested attribute is dirty, propagate
         }
     }
@@ -101,16 +159,40 @@ const filter = (attrib: Attributable, name: string): boolean => {
 };
 
 export const verify = (node: Node): Node => {
-    check(node, AttributeContext.CLASS);
+    check(node, node.pool, AttributeContext.CLASS);
     for (const field of node.fields) {
-        check(field, AttributeContext.FIELD);
+        check(field, node.pool, AttributeContext.FIELD);
     }
+
+    let hasDynamic = false;
     for (const method of node.methods) {
-        check(method, AttributeContext.METHOD);
+        check(method, node.pool, AttributeContext.METHOD);
         if ((method.access & Modifier.ABSTRACT) > 0) {
             // Code attributes are not allowed on abstract methods
             filter(method, AttributeType.CODE);
         }
+
+        hasDynamic =
+            hasDynamic ||
+            method.attrs.some(
+                (a) =>
+                    a.type === AttributeType.CODE &&
+                    (a as CodeAttribute).insns.some((i) => {
+                        if (i.opcode === Opcode.LDC || i.opcode === Opcode.LDC_W || i.opcode === Opcode.LDC2_W) {
+                            const index = (i as ConstantInstruction).index;
+                            const type = node.pool[index]?.type;
+
+                            return type === ConstantType.INVOKE_DYNAMIC || type === ConstantType.DYNAMIC;
+                        }
+
+                        return i.opcode === Opcode.INVOKEDYNAMIC;
+                    })
+            );
+    }
+
+    if (!hasDynamic) {
+        // no InvokeDynamic/Dynamic constant pool entry usages detected, remove
+        filter(node, AttributeType.BOOTSTRAP_METHODS);
     }
 
     return node; // in-place
