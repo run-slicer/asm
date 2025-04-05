@@ -113,9 +113,24 @@ const checkPoolAccess = (attr: Attribute, pool: Pool): boolean => {
     return true;
 };
 
+// attribute types that we can parse
+const SUPPORTED_TYPES = new Set<string>([
+    AttributeType.CODE,
+    AttributeType.SOURCE_FILE,
+    AttributeType.SIGNATURE,
+    AttributeType.LOCAL_VARIABLE_TABLE,
+    AttributeType.EXCEPTIONS,
+    AttributeType.CONSTANT_VALUE,
+    AttributeType.BOOTSTRAP_METHODS,
+]);
 const checkSingle = (attr: Attribute, pool: Pool, ctx: AttributeContext): boolean => {
     if ((getAllowedContext(attr) & ctx) === 0) {
         // attribute not allowed in context
+        return false;
+    }
+    const name = attr.name!.string;
+    if (name !== attr.type && SUPPORTED_TYPES.has(name)) {
+        // failed to parse supported attribute
         return false;
     }
     if (!checkPoolAccess(attr, pool)) {

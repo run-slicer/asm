@@ -32,4 +32,5 @@ describe("disassembly", () => {
     register("samples/base/sample/math/Longs.class");
     register("samples/base/sample/misc/Exceptions.class");
     register("samples/base/sample/misc/Annotations.class");
+    register("samples/crasher/sample/math/BinscureBinarySearch.class");
 });

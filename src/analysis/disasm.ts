@@ -4,6 +4,7 @@ import type {
     CodeAttribute,
     ConstantValueAttribute,
     ExceptionsAttribute,
+    ExceptionTableEntry,
     SignatureAttribute,
     SourceFileAttribute,
 } from "../attr";
@@ -482,31 +483,42 @@ const disassembleCode = (code: CodeAttribute, pool: Pool, indent: string, refHol
     let level = 0;
 
     let result = "";
-    for (const insn of code.insns) {
-        const excEntries = code.exceptionTable
-            .map((entry, index) => ({ entry, index }))
-            .filter(({ entry }) => entry.startPC === insn.offset || entry.endPC === insn.offset)
-            .sort(({ entry }) => (entry.startPC === insn.offset ? 1 : -1));
-
-        for (const { index: y, entry: excEntry } of excEntries) {
-            if (excEntry.startPC === insn.offset) {
+    const excHandlers = (entries: { entry: ExceptionTableEntry; index: number; start: boolean }[]) => {
+        for (const { index, entry, start } of entries) {
+            if (start) {
                 result += `${indent.repeat(level)}try {\n`;
                 level++;
             } else {
-                // excEntry.endPC === insn.offset
                 level--;
                 result += `${indent.repeat(level)}} catch (`;
-                if (excEntry.catchType === 0) {
+                if (entry.catchType === 0) {
                     result += `${refHolder.name("java/lang/Throwable")} /* 0 */`;
                 } else {
-                    result += refHolder.name((pool[(pool[excEntry.catchType] as ClassEntry).name] as UTF8Entry).string);
+                    result += refHolder.name((pool[(pool[entry.catchType] as ClassEntry).name] as UTF8Entry).string);
                 }
-                result += ` exc${y}) {\n${indent.repeat(level + 1)}/* goto ${excEntry.handlerPC} */\n${indent.repeat(level)}}\n`;
+                result += ` exc${index}) {\n${indent.repeat(level + 1)}/* goto ${entry.handlerPC} */\n${indent.repeat(level)}}\n`;
             }
         }
+    };
+
+    for (const insn of code.insns) {
+        excHandlers(
+            code.exceptionTable
+                .map((entry, index) => ({ entry, index, start: entry.startPC === insn.offset }))
+                .filter(({ entry, start }) => start || entry.endPC === insn.offset)
+                .sort(({ start }) => (start ? 1 : -1))
+        );
 
         result += `${indent.repeat(level)}// ${insn.offset.toString().padStart(padding, " ")}: ${formatInsn(code, insn, pool)}\n`;
     }
+
+    const lastInsn = code.insns[code.insns.length - 1];
+    // close pending handlers
+    excHandlers(
+        code.exceptionTable
+            .map((entry, index) => ({ entry, index, start: false }))
+            .filter(({ entry }) => entry.endPC >= lastInsn.offset + lastInsn.length)
+    );
 
     return result;
 };
