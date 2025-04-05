@@ -18,8 +18,24 @@ import {
     readLocalVariableTable,
     writeLocalVariableTable,
 } from "./lvt";
-import { type SignatureAttribute, readSignature, writeSignature } from "./signature";
-import { type SourceFileAttribute, readSourceFile, writeSourceFile } from "./source_file";
+import {
+    type NestHostAttribute,
+    type NestMember,
+    type NestMembersAttribute,
+    readNestHost,
+    readNestMembers,
+    writeNestHost,
+    writeNestMembers,
+} from "./nest";
+import {
+    type PermittedSubclass,
+    type PermittedSubclassesAttribute,
+    readPermittedSubclasses,
+    writePermittedSubclasses,
+} from "./permitted_subclasses";
+import { readRecord, type RecordAttribute, type RecordComponent, writeRecord } from "./record";
+import { readSignature, type SignatureAttribute, writeSignature } from "./signature";
+import { readSourceFile, type SourceFileAttribute, writeSourceFile } from "./source_file";
 
 export interface Attribute extends DirtyMarkable {
     type?: AttributeType;
@@ -68,6 +84,18 @@ const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
                     break;
                 case AttributeType.BOOTSTRAP_METHODS:
                     attr = readBootstrapMethods(attr, pool);
+                    break;
+                case AttributeType.RECORD:
+                    attr = readRecord(attr, pool, flags);
+                    break;
+                case AttributeType.PERMITTED_SUBCLASSES:
+                    attr = readPermittedSubclasses(attr, pool);
+                    break;
+                case AttributeType.NEST_HOST:
+                    attr = readNestHost(attr, pool);
+                    break;
+                case AttributeType.NEST_MEMBERS:
+                    attr = readNestMembers(attr, pool);
                     break;
             }
         } catch (e) {
@@ -125,6 +153,18 @@ const writeSingle = (buffer: Buffer, attr: Attribute) => {
             case AttributeType.BOOTSTRAP_METHODS:
                 attr.data = writeBootstrapMethods(attr as BootstrapMethodsAttribute);
                 break;
+            case AttributeType.RECORD:
+                attr.data = writeRecord(attr as RecordAttribute);
+                break;
+            case AttributeType.PERMITTED_SUBCLASSES:
+                attr.data = writePermittedSubclasses(attr as PermittedSubclassesAttribute);
+                break;
+            case AttributeType.NEST_HOST:
+                attr.data = writeNestHost(attr as NestHostAttribute);
+                break;
+            case AttributeType.NEST_MEMBERS:
+                attr.data = writeNestMembers(attr as NestMembersAttribute);
+                break;
         }
 
         attr.dirty = false;
@@ -149,10 +189,17 @@ export {
     CodeAttribute,
     ConstantValueAttribute,
     ExceptionEntry,
-    ExceptionTableEntry,
     ExceptionsAttribute,
+    ExceptionTableEntry,
     LocalVariable,
     LocalVariableTableAttribute,
+    NestHostAttribute,
+    NestMember,
+    NestMembersAttribute,
+    PermittedSubclass,
+    PermittedSubclassesAttribute,
+    RecordAttribute,
+    RecordComponent,
     SignatureAttribute,
     SourceFileAttribute,
 };

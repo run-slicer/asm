@@ -7,6 +7,10 @@ import type {
     ConstantValueAttribute,
     ExceptionsAttribute,
     LocalVariableTableAttribute,
+    NestHostAttribute,
+    NestMembersAttribute,
+    PermittedSubclassesAttribute,
+    RecordAttribute,
     SignatureAttribute,
     SourceFileAttribute,
 } from "../attr";
@@ -108,12 +112,23 @@ const checkPoolAccess = (attr: Attribute, pool: Pool): boolean => {
                         );
                     })
             );
+        case AttributeType.RECORD:
+            return (attr as RecordAttribute).components.every(
+                (c) => c.nameEntry?.type === ConstantType.UTF8 && c.descriptorEntry?.type === ConstantType.UTF8
+            );
+        case AttributeType.PERMITTED_SUBCLASSES:
+            return (attr as PermittedSubclassesAttribute).classes.every((c) => c.entry?.type === ConstantType.CLASS);
+        case AttributeType.NEST_HOST:
+            return (attr as NestHostAttribute).hostClassEntry?.type === ConstantType.CLASS;
+        case AttributeType.NEST_MEMBERS:
+            return (attr as NestMembersAttribute).classes.every((c) => c.entry?.type === ConstantType.CLASS);
     }
 
     return true;
 };
 
 // attribute types that we can parse
+// TODO: check against AttributeType after we can parse everything
 const SUPPORTED_TYPES = new Set<string>([
     AttributeType.CODE,
     AttributeType.SOURCE_FILE,
@@ -122,6 +137,10 @@ const SUPPORTED_TYPES = new Set<string>([
     AttributeType.EXCEPTIONS,
     AttributeType.CONSTANT_VALUE,
     AttributeType.BOOTSTRAP_METHODS,
+    AttributeType.RECORD,
+    AttributeType.PERMITTED_SUBCLASSES,
+    AttributeType.NEST_HOST,
+    AttributeType.NEST_MEMBERS,
 ]);
 const checkSingle = (attr: Attribute, pool: Pool, ctx: AttributeContext): boolean => {
     if ((getAllowedContext(attr) & ctx) === 0) {
@@ -165,8 +184,8 @@ const check = (attrib: Attributable, pool: Pool, ctx: AttributeContext): boolean
     return dirty;
 };
 
-const filter = (attrib: Attributable, name: string): boolean => {
-    const valid = attrib.attrs.filter((a) => a.name?.string !== name);
+const filter = (attrib: Attributable, ...names: string[]): boolean => {
+    const valid = attrib.attrs.filter((a) => !names.includes(a.name?.string));
     const dirty = attrib.attrs.length > valid.length;
 
     attrib.attrs = valid;
@@ -205,9 +224,23 @@ export const verify = (node: Node): Node => {
             );
     }
 
+    // special case: RecordComponent is not Attributable, but holds them
+    for (const attr of node.attrs) {
+        if (attr.type !== AttributeType.RECORD) continue;
+
+        const record = attr as RecordAttribute;
+        if (record.components.some((c) => check(c, node.pool, AttributeContext.RECORD_COMPONENT))) {
+            record.dirty = true;
+        }
+    }
+
     if (!hasDynamic) {
         // no InvokeDynamic/Dynamic constant pool entry usages detected, remove
         filter(node, AttributeType.BOOTSTRAP_METHODS);
+    }
+    if ((node.access & Modifier.MODULE) === 0) {
+        // no module modifier, remove
+        filter(node, AttributeType.MODULE, AttributeType.MODULE_PACKAGES, AttributeType.MODULE_MAIN_CLASS);
     }
 
     return node; // in-place
