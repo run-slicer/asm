@@ -6,6 +6,7 @@ import type {
     CodeAttribute,
     ConstantValueAttribute,
     ExceptionsAttribute,
+    InnerClassesAttribute,
     LocalVariableTableAttribute,
     NestHostAttribute,
     NestMembersAttribute,
@@ -122,6 +123,14 @@ const checkPoolAccess = (attr: Attribute, pool: Pool): boolean => {
             return (attr as NestHostAttribute).hostClassEntry?.type === ConstantType.CLASS;
         case AttributeType.NEST_MEMBERS:
             return (attr as NestMembersAttribute).classes.every((c) => c.entry?.type === ConstantType.CLASS);
+        case AttributeType.INNER_CLASSES:
+            return (attr as InnerClassesAttribute).classes.every((c) => {
+                return (
+                    c.innerEntry?.type === ConstantType.CLASS &&
+                    (c.outerEntry?.type ?? ConstantType.CLASS) === ConstantType.CLASS &&
+                    (c.innerNameEntry?.type ?? ConstantType.UTF8) === ConstantType.UTF8
+                );
+            });
     }
 
     return true;
@@ -141,6 +150,7 @@ const SUPPORTED_TYPES = new Set<string>([
     AttributeType.PERMITTED_SUBCLASSES,
     AttributeType.NEST_HOST,
     AttributeType.NEST_MEMBERS,
+    AttributeType.INNER_CLASSES,
 ]);
 const checkSingle = (attr: Attribute, pool: Pool, ctx: AttributeContext): boolean => {
     if ((getAllowedContext(attr) & ctx) === 0) {

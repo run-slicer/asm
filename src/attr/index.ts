@@ -12,6 +12,7 @@ import {
 import { type CodeAttribute, type ExceptionTableEntry, readCode, writeCode } from "./code";
 import { type ConstantValueAttribute, readConstantValue, writeConstantValue } from "./constant_value";
 import { type ExceptionEntry, type ExceptionsAttribute, readExceptions, writeExceptions } from "./exceptions";
+import { type InnerClass, type InnerClassesAttribute, readInnerClasses, writeInnerClasses } from "./inner_classes";
 import {
     type LocalVariable,
     type LocalVariableTableAttribute,
@@ -97,6 +98,9 @@ const readSingle = (buffer: Buffer, pool: Pool, flags: number): Attribute => {
                 case AttributeType.NEST_MEMBERS:
                     attr = readNestMembers(attr, pool);
                     break;
+                case AttributeType.INNER_CLASSES:
+                    attr = readInnerClasses(attr, pool);
+                    break;
             }
         } catch (e) {
             console.warn(`failed to parse ${name?.string || "unknown"} attribute, data length ${data.length}`);
@@ -165,6 +169,9 @@ const writeSingle = (buffer: Buffer, attr: Attribute) => {
             case AttributeType.NEST_MEMBERS:
                 attr.data = writeNestMembers(attr as NestMembersAttribute);
                 break;
+            case AttributeType.INNER_CLASSES:
+                attr.data = writeInnerClasses(attr as InnerClassesAttribute);
+                break;
         }
 
         attr.dirty = false;
@@ -191,6 +198,8 @@ export {
     ExceptionEntry,
     ExceptionsAttribute,
     ExceptionTableEntry,
+    InnerClass,
+    InnerClassesAttribute,
     LocalVariable,
     LocalVariableTableAttribute,
     NestHostAttribute,
